@@ -1,14 +1,334 @@
-import { Box, Typography } from '@mui/material';
+import { useState, useEffect } from 'react';
+import {
+  Box,
+  Button,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Chip,
+  Stack,
+  FormControlLabel,
+  Switch,
+  Alert,
+} from '@mui/material';
+import { Add, Edit, Delete, Search } from '@mui/icons-material';
+import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/common';
+import { dishService } from '@/services';
+import type { Dish, Column } from '@/types';
+import { Restaurant } from '@mui/icons-material';
 
 export default function DishesPage() {
+  const [dishes, setDishes] = useState<Dish[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [openModal, setOpenModal] = useState(false);
+  const [editDish, setEditDish] = useState<Dish | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; dish: Dish | null }>({
+    open: false,
+    dish: null,
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    price: '',
+    ingredients: '',
+    category: '',
+    available: true,
+  });
+
+  useEffect(() => {
+    loadDishes();
+  }, []);
+
+  const loadDishes = async () => {
+    try {
+      setLoading(true);
+      const data = await dishService.getAll();
+      setDishes(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load dishes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenModal = (dish?: Dish) => {
+    if (dish) {
+      setEditDish(dish);
+      setFormData({
+        name: dish.name,
+        description: dish.description || '',
+        price: dish.price.toString(),
+        ingredients: dish.ingredients.join(', '),
+        category: dish.category || '',
+        available: dish.available,
+      });
+    } else {
+      setEditDish(null);
+      setFormData({
+        name: '',
+        description: '',
+        price: '',
+        ingredients: '',
+        category: '',
+        available: true,
+      });
+    }
+    setOpenModal(true);
+    setError(null);
+  };
+
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    setEditDish(null);
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const ingredients = formData.ingredients
+        .split(',')
+        .map((i) => i.trim())
+        .filter(Boolean);
+
+      const payload = {
+        name: formData.name,
+        description: formData.description || undefined,
+        price: parseFloat(formData.price),
+        ingredients,
+        category: formData.category || undefined,
+        available: formData.available,
+      };
+
+      if (editDish) {
+        await dishService.update(editDish.id, payload);
+      } else {
+        await dishService.create(payload);
+      }
+
+      handleCloseModal();
+      loadDishes();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save dish');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (deleteConfirm.dish) {
+      try {
+        await dishService.delete(deleteConfirm.dish.id);
+        setDeleteConfirm({ open: false, dish: null });
+        loadDishes();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to delete dish');
+      }
+    }
+  };
+
+  const filteredDishes = dishes.filter(
+    (dish) =>
+      dish.name.toLowerCase().includes(search.toLowerCase()) ||
+      dish.category?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const columns: Column<Dish>[] = [
+    {
+      id: 'name',
+      label: 'Name',
+      render: (row: Dish) => (
+        <Box>
+          <Box sx={{ fontWeight: 'medium' }}>{row.name}</Box>
+          {row.category && (
+            <Chip label={row.category} size="small" sx={{ mt: 0.5 }} />
+          )}
+        </Box>
+      ),
+    },
+    {
+      id: 'description',
+      label: 'Description',
+      render: (row: Dish) => row.description || '-',
+    },
+    {
+      id: 'price',
+      label: 'Price',
+      render: (row: Dish) => `$${row.price.toFixed(2)}`,
+    },
+    {
+      id: 'ingredients',
+      label: 'Ingredients',
+      render: (row: Dish) => (
+        <Stack direction="row" spacing={0.5} flexWrap="wrap">
+          {row.ingredients.slice(0, 3).map((ing: string, i: number) => (
+            <Chip key={i} label={ing} size="small" variant="outlined" />
+          ))}
+          {row.ingredients.length > 3 && (
+            <Chip label={`+${row.ingredients.length - 3}`} size="small" variant="outlined" />
+          )}
+        </Stack>
+      ),
+    },
+    {
+      id: 'available',
+      label: 'Status',
+      render: (row: Dish) => (
+        <Chip
+          label={row.available ? 'Available' : 'Unavailable'}
+          color={row.available ? 'success' : 'default'}
+          size="small"
+        />
+      ),
+    },
+    {
+      id: 'actions',
+      label: 'Actions',
+      render: (row: Dish) => (
+        <Stack direction="row" spacing={1}>
+          <IconButton size="small" onClick={() => handleOpenModal(row)}>
+            <Edit fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
+            color="error"
+            onClick={() => setDeleteConfirm({ open: true, dish: row })}
+          >
+            <Delete fontSize="small" />
+          </IconButton>
+        </Stack>
+      ),
+    },
+  ];
+
+  if (loading) {
+    return <Box>Loading...</Box>;
+  }
+
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Menu / Dishes
-      </Typography>
-      <Typography variant="body1" color="text.secondary">
-        Manage your restaurant menu and dishes
-      </Typography>
+      <PageHeader
+        title="Menu / Dishes"
+        subtitle="Manage your restaurant menu items"
+        action={
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => handleOpenModal()}
+          >
+            Add Dish
+          </Button>
+        }
+      />
+
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      <Box sx={{ mb: 3 }}>
+        <TextField
+          placeholder="Search dishes..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          InputProps={{
+            startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
+          }}
+          sx={{ width: 300 }}
+        />
+      </Box>
+
+      {filteredDishes.length === 0 ? (
+        <EmptyState
+          icon={<Restaurant fontSize="large" />}
+          title={search ? 'No dishes found' : 'No dishes yet'}
+          description={search ? 'Try a different search term' : 'Add your first dish to get started'}
+          action={
+            !search && (
+              <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenModal()}>
+                Add Dish
+              </Button>
+            )
+          }
+        />
+      ) : (
+        <DataTable
+          columns={columns}
+          rows={filteredDishes}
+          rowId={(row) => row.id}
+        />
+      )}
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={openModal} onClose={handleCloseModal} maxWidth="sm" fullWidth>
+        <DialogTitle>{editDish ? 'Edit Dish' : 'Add New Dish'}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            {error && <Alert severity="error">{error}</Alert>}
+            <TextField
+              label="Name"
+              fullWidth
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
+            <TextField
+              label="Description"
+              fullWidth
+              multiline
+              rows={2}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
+            <TextField
+              label="Price"
+              type="number"
+              fullWidth
+              value={formData.price}
+              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              required
+              InputProps={{ startAdornment: '$' }}
+            />
+            <TextField
+              label="Ingredients (comma separated)"
+              fullWidth
+              value={formData.ingredients}
+              onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
+              placeholder="e.g., tomato, cheese, basil"
+            />
+            <TextField
+              label="Category"
+              fullWidth
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              placeholder="e.g., Main Course, Appetizer"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={formData.available}
+                  onChange={(e) => setFormData({ ...formData, available: e.target.checked })}
+                />
+              }
+              label="Available for ordering"
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseModal}>Cancel</Button>
+          <Button onClick={handleSubmit} variant="contained">
+            {editDish ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        title="Delete Dish"
+        message={`Are you sure you want to delete "${deleteConfirm.dish?.name}"? This action cannot be undone.`}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteConfirm({ open: false, dish: null })}
+      />
     </Box>
   );
 }
