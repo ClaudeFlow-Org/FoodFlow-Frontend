@@ -20,6 +20,7 @@ class DishService {
   }
 
   async create(data: CreateDishRequest): Promise<Dish> {
+    console.log(data);
     const response = await api.post<ApiResponse<Dish>>(this.basePath, data);
     return response.data.data;
   }

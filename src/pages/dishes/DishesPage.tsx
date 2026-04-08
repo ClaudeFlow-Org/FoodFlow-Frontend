@@ -8,10 +8,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Chip,
   Stack,
-  FormControlLabel,
-  Switch,
   Alert,
 } from '@mui/material';
 import { Add, Edit, Delete, Search } from '@mui/icons-material';
@@ -37,8 +34,6 @@ export default function DishesPage() {
     description: '',
     price: '',
     ingredients: '',
-    category: '',
-    available: true,
   });
 
   useEffect(() => {
@@ -64,9 +59,7 @@ export default function DishesPage() {
         name: dish.name,
         description: dish.description || '',
         price: dish.price.toString(),
-        ingredients: dish.ingredients.join(', '),
-        category: dish.category || '',
-        available: dish.available,
+        ingredients: dish.ingredients,
       });
     } else {
       setEditDish(null);
@@ -75,8 +68,6 @@ export default function DishesPage() {
         description: '',
         price: '',
         ingredients: '',
-        category: '',
-        available: true,
       });
     }
     setOpenModal(true);
@@ -90,18 +81,11 @@ export default function DishesPage() {
 
   const handleSubmit = async () => {
     try {
-      const ingredients = formData.ingredients
-        .split(',')
-        .map((i) => i.trim())
-        .filter(Boolean);
-
       const payload = {
         name: formData.name,
         description: formData.description || undefined,
         price: parseFloat(formData.price),
-        ingredients,
-        category: formData.category || undefined,
-        available: formData.available,
+        ingredients: formData.ingredients,
       };
 
       if (editDish) {
@@ -131,8 +115,7 @@ export default function DishesPage() {
 
   const filteredDishes = dishes.filter(
     (dish) =>
-      dish.name.toLowerCase().includes(search.toLowerCase()) ||
-      dish.category?.toLowerCase().includes(search.toLowerCase())
+      dish.name.toLowerCase().includes(search.toLowerCase())
   );
 
   const columns: Column<Dish>[] = [
@@ -140,12 +123,7 @@ export default function DishesPage() {
       id: 'name',
       label: 'Name',
       render: (row: Dish) => (
-        <Box>
-          <Box sx={{ fontWeight: 'medium' }}>{row.name}</Box>
-          {row.category && (
-            <Chip label={row.category} size="small" sx={{ mt: 0.5 }} />
-          )}
-        </Box>
+        <Box sx={{ fontWeight: 'medium' }}>{row.name}</Box>
       ),
     },
     {
@@ -162,25 +140,7 @@ export default function DishesPage() {
       id: 'ingredients',
       label: 'Ingredients',
       render: (row: Dish) => (
-        <Stack direction="row" spacing={0.5} flexWrap="wrap">
-          {row.ingredients.slice(0, 3).map((ing: string, i: number) => (
-            <Chip key={i} label={ing} size="small" variant="outlined" />
-          ))}
-          {row.ingredients.length > 3 && (
-            <Chip label={`+${row.ingredients.length - 3}`} size="small" variant="outlined" />
-          )}
-        </Stack>
-      ),
-    },
-    {
-      id: 'available',
-      label: 'Status',
-      render: (row: Dish) => (
-        <Chip
-          label={row.available ? 'Available' : 'Unavailable'}
-          color={row.available ? 'success' : 'default'}
-          size="small"
-        />
+        <Box>{row.ingredients}</Box>
       ),
     },
     {
@@ -289,27 +249,13 @@ export default function DishesPage() {
               InputProps={{ startAdornment: '$' }}
             />
             <TextField
-              label="Ingredients (comma separated)"
+              label="Ingredients"
               fullWidth
+              multiline
+              rows={2}
               value={formData.ingredients}
               onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
               placeholder="e.g., tomato, cheese, basil"
-            />
-            <TextField
-              label="Category"
-              fullWidth
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              placeholder="e.g., Main Course, Appetizer"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={formData.available}
-                  onChange={(e) => setFormData({ ...formData, available: e.target.checked })}
-                />
-              }
-              label="Available for ordering"
             />
           </Stack>
         </DialogContent>

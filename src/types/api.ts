@@ -68,9 +68,8 @@ export interface Dish {
   name: string;
   description?: string;
   price: number;
-  ingredients: string[];
-  category?: string;
-  available: boolean;
+  ingredients: string;
+  userId: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -79,18 +78,14 @@ export interface CreateDishRequest {
   name: string;
   description?: string;
   price: number;
-  ingredients: string[];
-  category?: string;
-  available?: boolean;
+  ingredients: string;
 }
 
 export interface UpdateDishRequest {
   name?: string;
   description?: string;
   price?: number;
-  ingredients?: string[];
-  category?: string;
-  available?: boolean;
+  ingredients?: string;
 }
 
 // ==================== Product Types ====================
