@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,25 +15,39 @@ import {
   Link as MuiLink,
 } from '@mui/material';
 import { useAuthStore } from '@/store/authStore';
+import { useI18n } from '@/i18n';
+import { AppControls } from '@/components/common';
 
-const registerSchema = z
-  .object({
-    name: z.string().min(1, 'Name is required').min(2, 'Name must be at least 2 characters'),
-    email: z.string().min(1, 'Email is required').email('Invalid email address'),
-    password: z.string().min(1, 'Password is required').min(6, 'Password must be at least 6 characters'),
-    confirmPassword: z.string().min(1, 'Please confirm your password'),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  });
-
-type RegisterFormData = z.infer<typeof registerSchema>;
+type RegisterFormData = {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+};
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { register: registerUser, isLoading, error, clearError } = useAuthStore();
+  const { t } = useI18n();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const registerSchema = useMemo(
+    () =>
+      z
+        .object({
+          name: z.string().min(1, t('auth.validation.nameRequired')).min(2, t('auth.validation.nameMin')),
+          email: z.string().min(1, t('auth.validation.emailRequired')).email(t('auth.validation.emailInvalid')),
+          password: z
+            .string()
+            .min(1, t('auth.validation.passwordRequired'))
+            .min(6, t('auth.validation.passwordMin')),
+          confirmPassword: z.string().min(1, t('auth.validation.confirmRequired')),
+        })
+        .refine((data) => data.password === data.confirmPassword, {
+          message: t('auth.validation.passwordsMatch'),
+          path: ['confirmPassword'],
+        }),
+    [t]
+  );
 
   const {
     register,
@@ -59,9 +73,9 @@ export default function RegisterPage() {
         email: data.email,
         password: data.password,
       });
-      navigate('/dashboard');
+      void navigate('/dashboard');
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      setSubmitError(err instanceof Error ? err.message : t('auth.register.failed'));
     }
   };
 
@@ -72,8 +86,13 @@ export default function RegisterPage() {
         display: 'flex',
         alignItems: 'center',
         bgcolor: 'background.default',
+        px: 2,
+        position: 'relative',
       }}
     >
+      <Box sx={{ position: 'absolute', top: 24, right: 24 }}>
+        <AppControls compact />
+      </Box>
       <Container maxWidth="sm">
         <Paper
           elevation={3}
@@ -82,13 +101,14 @@ export default function RegisterPage() {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
+            borderRadius: 4,
           }}
         >
           <Typography component="h1" variant="h4" gutterBottom>
-            FoodFlow
+            {t('app.name')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Create your account
+            {t('auth.register.subtitle')}
           </Typography>
 
           {(error || submitError) && (
@@ -97,10 +117,10 @@ export default function RegisterPage() {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ width: '100%' }}>
+          <Box component="form" onSubmit={(event) => void handleSubmit(onSubmit)(event)} sx={{ width: '100%' }}>
             <TextField
               {...register('name')}
-              label="Full Name"
+              label={t('auth.fields.fullName')}
               fullWidth
               margin="normal"
               error={!!errors.name}
@@ -112,7 +132,7 @@ export default function RegisterPage() {
 
             <TextField
               {...register('email')}
-              label="Email"
+              label={t('auth.fields.email')}
               type="email"
               fullWidth
               margin="normal"
@@ -124,7 +144,7 @@ export default function RegisterPage() {
 
             <TextField
               {...register('password')}
-              label="Password"
+              label={t('auth.fields.password')}
               type="password"
               fullWidth
               margin="normal"
@@ -136,7 +156,7 @@ export default function RegisterPage() {
 
             <TextField
               {...register('confirmPassword')}
-              label="Confirm Password"
+              label={t('auth.fields.confirmPassword')}
               type="password"
               fullWidth
               margin="normal"
@@ -154,14 +174,14 @@ export default function RegisterPage() {
               sx={{ mt: 3, mb: 2 }}
               disabled={isLoading}
             >
-              {isLoading ? <CircularProgress size={24} /> : 'Create Account'}
+              {isLoading ? <CircularProgress size={24} /> : t('common.signUp')}
             </Button>
 
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2">
-                Already have an account?{' '}
+                {t('auth.register.hasAccount')}{' '}
                 <MuiLink component={Link} to="/login" underline="hover">
-                  Sign In
+                  {t('common.signIn')}
                 </MuiLink>
               </Typography>
             </Box>

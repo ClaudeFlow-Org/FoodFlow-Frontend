@@ -2,6 +2,7 @@ import { Card, CardContent, Typography, Chip, Box, Stack, Divider, SxProps } fro
 import { Receipt } from '@mui/icons-material';
 import type { Order } from '@/types';
 import { formatCurrency, formatDateTime } from '@/utils';
+import { useI18n } from '@/i18n';
 
 interface OrderCardProps {
   order: Order;
@@ -18,6 +19,8 @@ const statusColors: Record<Order['status'], 'default' | 'info' | 'warning' | 'su
 };
 
 export function OrderCard({ order, onClick, sx }: OrderCardProps) {
+  const { t } = useI18n();
+
   return (
     <Card
       sx={{
@@ -39,34 +42,34 @@ export function OrderCard({ order, onClick, sx }: OrderCardProps) {
               #{order.orderNumber.slice(-6)}
             </Typography>
           </Box>
-          <Chip label={order.status} color={statusColors[order.status]} size="small" />
+          <Chip label={t(`orders.status.${order.status}`)} color={statusColors[order.status]} size="small" />
         </Box>
 
         <Stack spacing={1}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
             <Typography variant="body2" color="text.secondary">
-              Customer
+              {t('orders.table')}
             </Typography>
             <Typography variant="body2">
-              {order.customerName || 'Walk-in'}
+              {order.customerName || t('orders.walkIn')}
             </Typography>
           </Box>
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
             <Typography variant="body2" color="text.secondary">
-              Type
+              {t('orders.type')}
             </Typography>
             <Typography variant="body2">
-              {order.orderType.replace('_', ' ')}
+              {t(`orders.type.${order.orderType}`)}
             </Typography>
           </Box>
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
             <Typography variant="body2" color="text.secondary">
-              Items
+              {t('orders.items')}
             </Typography>
             <Typography variant="body2">
-              {order.lineItems.length} item{order.lineItems.length !== 1 ? 's' : ''}
+              {t('orders.itemsCount', { count: order.lineItems.length })}
             </Typography>
           </Box>
 
@@ -74,7 +77,7 @@ export function OrderCard({ order, onClick, sx }: OrderCardProps) {
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              Total
+              {t('orders.total')}
             </Typography>
             <Typography variant="h6" color="primary.main">
               {formatCurrency(order.totalAmount)}

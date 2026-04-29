@@ -1,4 +1,5 @@
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from '@mui/material';
+import { useI18n } from '@/i18n';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -15,12 +16,13 @@ export function ConfirmDialog({
   open,
   title,
   message,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
+  confirmText,
+  cancelText,
   onConfirm,
   onCancel,
   severity = 'warning',
 }: ConfirmDialogProps) {
+  const { t } = useI18n();
   const color = severity === 'error' ? 'error' : severity === 'warning' ? 'warning' : 'primary';
 
   return (
@@ -31,10 +33,10 @@ export function ConfirmDialog({
       </DialogContent>
       <DialogActions>
         <Button onClick={onCancel} color="inherit">
-          {cancelText}
+          {cancelText || t('common.cancel')}
         </Button>
         <Button onClick={onConfirm} variant="contained" color={color}>
-          {confirmText}
+          {confirmText || t('common.confirm')}
         </Button>
       </DialogActions>
     </Dialog>

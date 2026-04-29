@@ -2,6 +2,7 @@ import { Card, CardContent, Typography, Box, SxProps } from '@mui/material';
 import { Inventory2Outlined, Warning } from '@mui/icons-material';
 import type { Product } from '@/types';
 import { formatCurrency, isLowStock } from '@/utils';
+import { useI18n } from '@/i18n';
 
 interface ProductCardProps {
   product: Product;
@@ -10,6 +11,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onClick, sx }: ProductCardProps) {
+  const { t } = useI18n();
   const lowStock = isLowStock(product.stockLevel, product.lowStockThreshold);
   const totalValue = product.stockLevel * product.unitCost;
 
@@ -22,7 +24,8 @@ export function ProductCard({ product, onClick, sx }: ProductCardProps) {
           transform: 'translateY(-4px)',
           boxShadow: 4,
         } : {},
-        borderLeft: lowStock ? '4px solid orange' : '4px solid transparent',
+        borderLeft: lowStock ? '4px solid' : '4px solid transparent',
+        borderColor: lowStock ? 'warning.main' : 'transparent',
         ...sx,
       }}
       onClick={onClick}
@@ -57,7 +60,7 @@ export function ProductCard({ product, onClick, sx }: ProductCardProps) {
         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
           <Box>
             <Typography variant="body2" color="text.secondary">
-              Stock
+              {t('products.stockLevel')}
             </Typography>
             <Typography variant="body1" fontWeight="medium">
               {product.stockLevel} {product.unitOfMeasure}
@@ -65,7 +68,7 @@ export function ProductCard({ product, onClick, sx }: ProductCardProps) {
           </Box>
           <Box>
             <Typography variant="body2" color="text.secondary">
-              Unit Cost
+              {t('products.unitCost')}
             </Typography>
             <Typography variant="body1" fontWeight="medium">
               {formatCurrency(product.unitCost)}
@@ -73,7 +76,7 @@ export function ProductCard({ product, onClick, sx }: ProductCardProps) {
           </Box>
           <Box>
             <Typography variant="body2" color="text.secondary">
-              Total Value
+              {t('products.totalValue')}
             </Typography>
             <Typography variant="body1" fontWeight="medium" color="primary.main">
               {formatCurrency(totalValue)}
@@ -82,7 +85,10 @@ export function ProductCard({ product, onClick, sx }: ProductCardProps) {
         </Box>
         {lowStock && (
           <Typography variant="caption" color="warning.main" sx={{ mt: 1, display: 'block' }}>
-            Low stock - threshold: {product.lowStockThreshold} {product.unitOfMeasure}
+            {t('products.lowStockCaption', {
+              threshold: product.lowStockThreshold,
+              unit: product.unitOfMeasure,
+            })}
           </Typography>
         )}
       </CardContent>

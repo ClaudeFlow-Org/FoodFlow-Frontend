@@ -23,6 +23,8 @@ import { useAuthStore } from '@/store/authStore';
 import { authService, subscriptionService } from '@/services';
 import type { SubscriptionPlan, UserSubscription } from '@/types';
 import { CheckCircle, Star } from '@mui/icons-material';
+import { useI18n } from '@/i18n';
+import { formatCurrency } from '@/utils';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -40,6 +42,7 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 
 export default function SettingsPage() {
   const { user, updateProfile } = useAuthStore();
+  const { t } = useI18n();
   const [tabValue, setTabValue] = useState(0);
   const [profileData, setProfileData] = useState({ name: '', email: '' });
   const [passwordData, setPasswordData] = useState({
@@ -56,41 +59,53 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
 
+  const getPlanName = (plan: SubscriptionPlan) => t(`plans.${plan.type}.name`);
+  const getPlanFeature = (plan: SubscriptionPlan, feature: string, index: number) => {
+    const key = `plans.${plan.type}.feature.${index}`;
+    const translated = t(key);
+    return translated === key ? feature : translated;
+  };
+
   useEffect(() => {
     if (user) {
       setProfileData({ name: user.name, email: user.email });
     }
-    loadSubscriptionData();
+    void loadSubscriptionData();
   }, [user]);
 
   const loadSubscriptionData = async () => {
     try {
-      const [subData, plansData] = await Promise.all([
-        subscriptionService.getCurrentSubscription(),
-        subscriptionService.getPlans(),
-      ]);
-      setSubscription(subData);
+      const plansData = await subscriptionService.getPlans();
       setPlans(plansData);
+      const subData = await subscriptionService.getCurrentSubscription();
+      if (subData) {
+        setSubscription({
+          ...subData,
+          plan: plansData.find((plan) => plan.type === subData.type) || subData.plan,
+        });
+      } else {
+        setSubscription(null);
+      }
     } catch (err) {
-      console.error('Failed to load subscription data', err);
+      console.error(t('settings.loadSubscriptionError'), err);
     }
   };
 
   const handleProfileUpdate = async () => {
     try {
       await updateProfile({ name: profileData.name, email: profileData.email });
-      setSuccess('Profile updated successfully');
+      setSuccess(t('settings.profileUpdated'));
       setError('');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
+      setError(err instanceof Error ? err.message : t('settings.profileUpdateError'));
       setSuccess('');
     }
   };
 
   const handlePasswordChange = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError('New passwords do not match');
+      setError(t('settings.passwordMismatch'));
       return;
     }
 
@@ -99,12 +114,12 @@ export default function SettingsPage() {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword,
       });
-      setSuccess('Password changed successfully');
+      setSuccess(t('settings.passwordChanged'));
       setError('');
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to change password');
+      setError(err instanceof Error ? err.message : t('settings.passwordChangeError'));
       setSuccess('');
     }
   };
@@ -112,20 +127,20 @@ export default function SettingsPage() {
   const handleSubscribe = async () => {
     if (upgradeDialog.plan) {
       try {
-        await subscriptionService.subscribe({ planId: upgradeDialog.plan.id });
+        await subscriptionService.subscribe({ plan: upgradeDialog.plan.type });
         setUpgradeDialog({ open: false, plan: null });
         await loadSubscriptionData();
-        setSuccess('Subscription updated successfully');
+        setSuccess(t('settings.subscriptionUpdated'));
         setTimeout(() => setSuccess(''), 3000);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to update subscription');
+        setError(err instanceof Error ? err.message : t('settings.subscriptionUpdateError'));
       }
     }
   };
 
   return (
     <Box>
-      <PageHeader title="Settings" subtitle="Manage your account and preferences" />
+      <PageHeader title={t('settings.title')} subtitle={t('settings.subtitle')} />
 
       {success && (
         <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
@@ -140,10 +155,10 @@ export default function SettingsPage() {
       )}
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
-          <Tab label="Profile" />
-          <Tab label="Security" />
-          <Tab label="Subscription" />
+        <Tabs value={tabValue} onChange={(_event, v: number) => setTabValue(v)}>
+          <Tab label={t('settings.tabs.profile')} />
+          <Tab label={t('settings.tabs.security')} />
+          <Tab label={t('settings.tabs.subscription')} />
         </Tabs>
       </Box>
 
@@ -152,29 +167,29 @@ export default function SettingsPage() {
         <Card sx={{ maxWidth: 600 }}>
           <CardContent>
             <Stack spacing={3}>
-              <Typography variant="h6">Profile Information</Typography>
+              <Typography variant="h6">{t('settings.profileInfo')}</Typography>
               <TextField
-                label="Name"
+                label={t('settings.name')}
                 fullWidth
                 value={profileData.name}
                 onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
               />
               <TextField
-                label="Email"
+                label={t('settings.email')}
                 type="email"
                 fullWidth
                 value={profileData.email}
                 onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
               />
               <TextField
-                label="Subscription"
+                label={t('settings.subscription')}
                 fullWidth
-                value={user?.subscriptionType || 'FREE'}
+                value={t(`plans.${user?.subscriptionType || 'FREE'}.name`)}
                 disabled
                 InputProps={{
                   startAdornment: (
                     <Chip
-                      label={user?.subscriptionType}
+                      label={t(`plans.${user?.subscriptionType || 'FREE'}.name`)}
                       color={user?.subscriptionType !== 'FREE' ? 'primary' : 'default'}
                       size="small"
                       sx={{ mr: 1 }}
@@ -184,10 +199,10 @@ export default function SettingsPage() {
               />
               <Button
                 variant="contained"
-                onClick={handleProfileUpdate}
+                onClick={() => void handleProfileUpdate()}
                 disabled={!profileData.name || !profileData.email}
               >
-                Save Changes
+                {t('common.saveChanges')}
               </Button>
             </Stack>
           </CardContent>
@@ -199,9 +214,9 @@ export default function SettingsPage() {
         <Card sx={{ maxWidth: 600 }}>
           <CardContent>
             <Stack spacing={3}>
-              <Typography variant="h6">Change Password</Typography>
+              <Typography variant="h6">{t('settings.passwordTitle')}</Typography>
               <TextField
-                label="Current Password"
+                label={t('settings.currentPassword')}
                 type="password"
                 fullWidth
                 value={passwordData.currentPassword}
@@ -210,7 +225,7 @@ export default function SettingsPage() {
                 }
               />
               <TextField
-                label="New Password"
+                label={t('settings.newPassword')}
                 type="password"
                 fullWidth
                 value={passwordData.newPassword}
@@ -219,7 +234,7 @@ export default function SettingsPage() {
                 }
               />
               <TextField
-                label="Confirm New Password"
+                label={t('settings.confirmNewPassword')}
                 type="password"
                 fullWidth
                 value={passwordData.confirmPassword}
@@ -229,14 +244,14 @@ export default function SettingsPage() {
               />
               <Button
                 variant="contained"
-                onClick={handlePasswordChange}
+                onClick={() => void handlePasswordChange()}
                 disabled={
                   !passwordData.currentPassword ||
                   !passwordData.newPassword ||
                   !passwordData.confirmPassword
                 }
               >
-                Change Password
+                {t('common.changePassword')}
               </Button>
             </Stack>
           </CardContent>
@@ -258,13 +273,13 @@ export default function SettingsPage() {
                 <Stack direction="row" alignItems="center" spacing={2}>
                   <Star />
                   <Box>
-                    <Typography variant="h5">{subscription.plan.name}</Typography>
+                    <Typography variant="h5">{getPlanName(subscription.plan)}</Typography>
                     <Typography variant="body2">
-                      ${subscription.plan.price}/{subscription.plan.interval.toLowerCase()}
+                      {formatCurrency(subscription.plan.price)}/{t('settings.monthly')}
                     </Typography>
                   </Box>
                   <Chip
-                    label={subscription.status}
+                    label={t(`subscription.status.${subscription.status}`)}
                     color={subscription.status === 'ACTIVE' ? 'success' : 'default'}
                     sx={{ ml: 'auto' }}
                   />
@@ -275,7 +290,7 @@ export default function SettingsPage() {
         )}
 
         <Typography variant="h6" gutterBottom>
-          Available Plans
+          {t('settings.availablePlans')}
         </Typography>
         <Grid container spacing={2}>
           {plans.map((plan) => (
@@ -289,11 +304,11 @@ export default function SettingsPage() {
                 }}
               >
                 <Stack spacing={2}>
-                  <Typography variant="h6">{plan.name}</Typography>
+                  <Typography variant="h6">{getPlanName(plan)}</Typography>
                   <Typography variant="h4" color="primary.main">
-                    ${plan.price}
+                    {formatCurrency(plan.price)}
                     <Typography variant="body2" color="text.secondary">
-                      /{plan.interval.toLowerCase()}
+                      /{t('settings.monthly')}
                     </Typography>
                   </Typography>
                   <Stack spacing={1}>
@@ -302,7 +317,7 @@ export default function SettingsPage() {
                         <CheckCircle
                           sx={{ fontSize: 16, color: 'success.main' }}
                         />
-                        <Typography variant="body2">{feature}</Typography>
+                        <Typography variant="body2">{getPlanFeature(plan, feature, i)}</Typography>
                       </Stack>
                     ))}
                   </Stack>
@@ -312,7 +327,7 @@ export default function SettingsPage() {
                     disabled={subscription?.plan.id === plan.id}
                     onClick={() => setUpgradeDialog({ open: true, plan })}
                   >
-                    {subscription?.plan.id === plan.id ? 'Current Plan' : 'Upgrade'}
+                    {subscription?.plan.id === plan.id ? t('settings.currentPlan') : t('common.upgrade')}
                   </Button>
                 </Stack>
               </Paper>
@@ -323,18 +338,20 @@ export default function SettingsPage() {
 
       {/* Upgrade Confirmation Dialog */}
       <Dialog open={upgradeDialog.open} onClose={() => setUpgradeDialog({ open: false, plan: null })}>
-        <DialogTitle>Confirm Subscription Change</DialogTitle>
+        <DialogTitle>{t('settings.confirmSubscriptionTitle')}</DialogTitle>
         <DialogContent>
           <Typography>
-            You are about to {subscription?.plan.id === upgradeDialog.plan?.id ? 'downgrade' : 'upgrade'} to{' '}
-            <strong>{upgradeDialog.plan?.name}</strong> at ${upgradeDialog.plan?.price}/
-            {upgradeDialog.plan?.interval.toLowerCase()}.
+            {t('settings.confirmSubscriptionMessage', {
+              plan: upgradeDialog.plan ? getPlanName(upgradeDialog.plan) : '',
+              price: upgradeDialog.plan ? formatCurrency(upgradeDialog.plan.price) : '',
+              interval: t('settings.monthly'),
+            })}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUpgradeDialog({ open: false, plan: null })}>Cancel</Button>
-          <Button onClick={handleSubscribe} variant="contained">
-            Confirm
+          <Button onClick={() => setUpgradeDialog({ open: false, plan: null })}>{t('common.cancel')}</Button>
+          <Button onClick={() => void handleSubscribe()} variant="contained">
+            {t('common.confirm')}
           </Button>
         </DialogActions>
       </Dialog>

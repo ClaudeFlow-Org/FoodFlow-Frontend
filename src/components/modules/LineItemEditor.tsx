@@ -13,6 +13,7 @@ import {
 import { Add, Delete } from '@mui/icons-material';
 import type { Dish } from '@/types';
 import { formatCurrency } from '@/utils';
+import { useI18n } from '@/i18n';
 
 interface LineItem {
   dishId: number;
@@ -29,6 +30,8 @@ interface LineItemEditorProps {
 }
 
 export function LineItemEditor({ items, availableDishes, onChange, disabled }: LineItemEditorProps) {
+  const { t } = useI18n();
+
   const addItem = () => {
     onChange([
       ...items,
@@ -68,10 +71,10 @@ export function LineItemEditor({ items, availableDishes, onChange, disabled }: L
         <Paper key={index} sx={{ p: 2 }}>
           <Stack direction="row" spacing={2} alignItems="center">
             <FormControl sx={{ flexGrow: 1 }} disabled={disabled}>
-              <InputLabel>Dish</InputLabel>
+              <InputLabel>{t('orders.dish')}</InputLabel>
               <Select
                 value={item.dishId}
-                label="Dish"
+                label={t('orders.dish')}
                 onChange={(e) => updateItem(index, 'dishId', e.target.value)}
               >
                 {availableDishes.map((dish) => (
@@ -83,7 +86,7 @@ export function LineItemEditor({ items, availableDishes, onChange, disabled }: L
             </FormControl>
 
             <TextField
-              label="Quantity"
+              label={t('orders.quantity')}
               type="number"
               value={item.quantity}
               onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
@@ -114,7 +117,9 @@ export function LineItemEditor({ items, availableDishes, onChange, disabled }: L
       ))}
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h6">Total: {formatCurrency(getTotal())}</Typography>
+        <Typography variant="h6">
+          {t('orders.total')}: {formatCurrency(getTotal())}
+        </Typography>
       </Box>
 
       <Box sx={{ display: 'flex', justifyContent: 'center' }}>
@@ -126,7 +131,7 @@ export function LineItemEditor({ items, availableDishes, onChange, disabled }: L
         >
           <Add />
           <Typography variant="button" sx={{ ml: 1 }}>
-            Add Item
+            {t('orders.addItem')}
           </Typography>
         </IconButton>
       </Box>

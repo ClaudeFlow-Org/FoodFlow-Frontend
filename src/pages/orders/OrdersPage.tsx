@@ -23,12 +23,9 @@ import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/c
 import { orderService, dishService } from '@/services';
 import type { Order, Dish, CreateLineItemRequest, OrderType, OrderStatus, Column } from '@/types';
 import { Receipt } from '@mui/icons-material';
+import { useI18n } from '@/i18n';
 
-const orderTypes: { value: OrderType; label: string }[] = [
-  { value: 'DINE_IN', label: 'Dine In' },
-  { value: 'TAKEAWAY', label: 'Takeaway' },
-  { value: 'DELIVERY', label: 'Delivery' },
-];
+const orderTypes: OrderType[] = ['DINE_IN', 'TAKEAWAY', 'DELIVERY'];
 
 const statusColors: Record<OrderStatus, 'success' | 'info' | 'warning' | 'error' | 'default'> = {
   PENDING: 'default',
@@ -44,6 +41,7 @@ interface LineItemForm extends CreateLineItemRequest {
 }
 
 export default function OrdersPage() {
+  const { t } = useI18n();
   const [orders, setOrders] = useState<Order[]>([]);
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,15 +53,13 @@ export default function OrdersPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    customerName: '',
-    orderType: 'TAKEAWAY' as OrderType,
-    notes: '',
+    tableIdentifier: '',
   });
 
   const [lineItems, setLineItems] = useState<LineItemForm[]>([]);
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, []);
 
   const loadData = async () => {
@@ -74,9 +70,9 @@ export default function OrdersPage() {
         dishService.getAll(),
       ]);
       setOrders(ordersData);
-      setDishes(dishesData.filter((d) => d.available));
+      setDishes(dishesData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      setError(err instanceof Error ? err.message : t('orders.loadError'));
     } finally {
       setLoading(false);
     }
@@ -84,9 +80,7 @@ export default function OrdersPage() {
 
   const handleOpenModal = () => {
     setFormData({
-      customerName: '',
-      orderType: 'TAKEAWAY',
-      notes: '',
+      tableIdentifier: '',
     });
     setLineItems([]);
     setOpenModal(true);
@@ -131,21 +125,24 @@ export default function OrdersPage() {
   const handleSubmit = async () => {
     try {
       if (lineItems.length === 0) {
-        setError('Please add at least one item to the order');
+        setError(t('orders.emptyLineItems'));
         return;
       }
 
       await orderService.create({
-        customerName: formData.customerName || undefined,
-        orderType: formData.orderType,
-        notes: formData.notes || undefined,
-        lineItems: lineItems.map(({ dishId, quantity }) => ({ dishId, quantity })),
+        tableIdentifier: formData.tableIdentifier,
+        lineItems: lineItems.map(({ dishId, dishName, unitPrice, quantity }) => ({
+          dishId,
+          dishName,
+          unitPrice,
+          quantity,
+        })),
       });
 
       handleCloseModal();
-      loadData();
+      void loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create order');
+      setError(err instanceof Error ? err.message : t('orders.createError'));
     }
   };
 
@@ -154,9 +151,9 @@ export default function OrdersPage() {
       try {
         await orderService.delete(deleteConfirm.order.id);
         setDeleteConfirm({ open: false, order: null });
-        loadData();
+        void loadData();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to delete order');
+        setError(err instanceof Error ? err.message : t('orders.deleteError'));
       }
     }
   };
@@ -164,22 +161,22 @@ export default function OrdersPage() {
   const columns: Column<Order>[] = [
     {
       id: 'orderNumber',
-      label: 'Order #',
+      label: t('orders.orderNumber'),
       render: (row: Order) => (
         <Box sx={{ fontWeight: 'bold' }}>#{row.orderNumber.slice(-6)}</Box>
       ),
     },
     {
       id: 'customer',
-      label: 'Customer',
-      render: (row: Order) => row.customerName || 'Walk-in',
+      label: t('orders.table'),
+      render: (row: Order) => row.customerName || t('orders.walkIn'),
     },
     {
       id: 'type',
-      label: 'Type',
+      label: t('orders.type'),
       render: (row: Order) => (
         <Chip
-          label={orderTypes.find((t) => t.value === row.orderType)?.label || row.orderType}
+          label={orderTypes.includes(row.orderType) ? t(`orders.type.${row.orderType}`) : row.orderType}
           size="small"
           variant="outlined"
         />
@@ -187,12 +184,12 @@ export default function OrdersPage() {
     },
     {
       id: 'items',
-      label: 'Items',
-      render: (row: Order) => `${row.lineItems.length} item${row.lineItems.length !== 1 ? 's' : ''}`,
+      label: t('orders.items'),
+      render: (row: Order) => t('orders.itemsCount', { count: row.lineItems.length }),
     },
     {
       id: 'total',
-      label: 'Total',
+      label: t('orders.total'),
       render: (row: Order) => (
         <Typography variant="body2" fontWeight="bold">
           ${row.totalAmount.toFixed(2)}
@@ -201,14 +198,14 @@ export default function OrdersPage() {
     },
     {
       id: 'status',
-      label: 'Status',
+      label: t('orders.status'),
       render: (row: Order) => (
-        <Chip label={row.status} color={statusColors[row.status]} size="small" />
+        <Chip label={t(`orders.status.${row.status}`)} color={statusColors[row.status]} size="small" />
       ),
     },
     {
       id: 'actions',
-      label: 'Actions',
+      label: t('common.actions'),
       render: (row: Order) => (
         <IconButton
           size="small"
@@ -222,21 +219,21 @@ export default function OrdersPage() {
   ];
 
   if (loading) {
-    return <Box>Loading...</Box>;
+    return <Box>{t('common.loading')}</Box>;
   }
 
   return (
     <Box>
       <PageHeader
-        title="Orders"
-        subtitle="Manage customer orders"
+        title={t('orders.title')}
+        subtitle={t('orders.subtitle')}
         action={
           <Button
             variant="contained"
             startIcon={<Add />}
             onClick={handleOpenModal}
           >
-            New Order
+            {t('orders.new')}
           </Button>
         }
       />
@@ -246,11 +243,11 @@ export default function OrdersPage() {
       {orders.length === 0 ? (
         <EmptyState
           icon={<Receipt fontSize="large" />}
-          title="No orders yet"
-          description="Create your first order to get started"
+          title={t('orders.emptyTitle')}
+          description={t('orders.emptyDescription')}
           action={
             <Button variant="contained" startIcon={<Add />} onClick={handleOpenModal}>
-              New Order
+              {t('orders.new')}
             </Button>
           }
         />
@@ -264,46 +261,33 @@ export default function OrdersPage() {
 
       {/* Create Order Dialog */}
       <Dialog open={openModal} onClose={handleCloseModal} maxWidth="md" fullWidth>
-        <DialogTitle>Create New Order</DialogTitle>
+        <DialogTitle>{t('orders.createTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 1 }}>
             {error && <Alert severity="error">{error}</Alert>}
 
             <Stack direction="row" spacing={2}>
               <TextField
-                label="Customer Name (optional)"
+                label={t('orders.tableIdentifier')}
                 fullWidth
-                value={formData.customerName}
-                onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                value={formData.tableIdentifier}
+                onChange={(e) => setFormData({ ...formData, tableIdentifier: e.target.value })}
+                required
               />
-              <FormControl fullWidth>
-                <InputLabel>Order Type</InputLabel>
-                <Select
-                  value={formData.orderType}
-                  label="Order Type"
-                  onChange={(e) => setFormData({ ...formData, orderType: e.target.value as OrderType })}
-                >
-                  {orderTypes.map((type) => (
-                    <MenuItem key={type.value} value={type.value}>
-                      {type.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
             </Stack>
 
             <Box>
               <Typography variant="subtitle2" gutterBottom>
-                Line Items
+                {t('orders.lineItems')}
               </Typography>
               {lineItems.map((item, index) => (
                 <Paper key={index} sx={{ p: 2, mb: 2 }}>
                   <Stack direction="row" spacing={2} alignItems="center">
                     <FormControl sx={{ flexGrow: 1 }}>
-                      <InputLabel>Dish</InputLabel>
+                      <InputLabel>{t('orders.dish')}</InputLabel>
                       <Select
                         value={item.dishId}
-                        label="Dish"
+                        label={t('orders.dish')}
                         onChange={(e) => updateLineItem(index, 'dishId', e.target.value)}
                       >
                         {dishes.map((dish) => (
@@ -314,7 +298,7 @@ export default function OrdersPage() {
                       </Select>
                     </FormControl>
                     <TextField
-                      label="Quantity"
+                      label={t('orders.quantity')}
                       type="number"
                       value={item.quantity}
                       onChange={(e) => updateLineItem(index, 'quantity', parseInt(e.target.value) || 1)}
@@ -341,23 +325,13 @@ export default function OrdersPage() {
                 onClick={addLineItem}
                 disabled={dishes.length === 0}
               >
-                Add Item
+                {t('orders.addItem')}
               </Button>
             </Box>
 
-            <TextField
-              label="Notes (optional)"
-              multiline
-              rows={2}
-              fullWidth
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Any special instructions..."
-            />
-
             <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="h6">Total</Typography>
+                <Typography variant="h6">{t('orders.total')}</Typography>
                 <Typography variant="h4" color="primary.main">
                   ${getTotal().toFixed(2)}
                 </Typography>
@@ -366,9 +340,13 @@ export default function OrdersPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseModal}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained" disabled={lineItems.length === 0}>
-            Create Order
+          <Button onClick={handleCloseModal}>{t('common.cancel')}</Button>
+          <Button
+            onClick={() => void handleSubmit()}
+            variant="contained"
+            disabled={lineItems.length === 0 || !formData.tableIdentifier}
+          >
+            {t('orders.create')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -376,9 +354,11 @@ export default function OrdersPage() {
       {/* Delete Confirmation */}
       <ConfirmDialog
         open={deleteConfirm.open}
-        title="Delete Order"
-        message={`Are you sure you want to delete order #${deleteConfirm.order?.orderNumber.slice(-6)}? This action cannot be undone.`}
-        onConfirm={handleDelete}
+        title={t('orders.deleteTitle')}
+        message={t('orders.deleteMessage', {
+          number: deleteConfirm.order?.orderNumber.slice(-6) || '',
+        })}
+        onConfirm={() => void handleDelete()}
         onCancel={() => setDeleteConfirm({ open: false, order: null })}
       />
     </Box>

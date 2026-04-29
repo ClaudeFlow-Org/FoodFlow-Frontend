@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,18 +15,30 @@ import {
   Link as MuiLink,
 } from '@mui/material';
 import { useAuthStore } from '@/store/authStore';
+import { useI18n } from '@/i18n';
+import { AppControls } from '@/components/common';
 
-const loginSchema = z.object({
-  email: z.string().min(1, 'Email is required').email('Invalid email address'),
-  password: z.string().min(1, 'Password is required').min(6, 'Password must be at least 6 characters'),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
+type LoginFormData = {
+  email: string;
+  password: string;
+};
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuthStore();
+  const { t } = useI18n();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const loginSchema = useMemo(
+    () =>
+      z.object({
+        email: z.string().min(1, t('auth.validation.emailRequired')).email(t('auth.validation.emailInvalid')),
+        password: z
+          .string()
+          .min(1, t('auth.validation.passwordRequired'))
+          .min(6, t('auth.validation.passwordMin')),
+      }),
+    [t]
+  );
 
   const {
     register,
@@ -46,9 +58,9 @@ export default function LoginPage() {
 
     try {
       await login(data);
-      navigate('/dashboard');
+      void navigate('/dashboard');
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+      setSubmitError(err instanceof Error ? err.message : t('auth.login.failed'));
     }
   };
 
@@ -59,8 +71,13 @@ export default function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         bgcolor: 'background.default',
+        px: 2,
+        position: 'relative',
       }}
     >
+      <Box sx={{ position: 'absolute', top: 24, right: 24 }}>
+        <AppControls compact />
+      </Box>
       <Container maxWidth="sm">
         <Paper
           elevation={3}
@@ -69,13 +86,14 @@ export default function LoginPage() {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
+            borderRadius: 4,
           }}
         >
           <Typography component="h1" variant="h4" gutterBottom>
-            FoodFlow
+            {t('app.name')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Restaurant Management System
+            {t('auth.login.subtitle')}
           </Typography>
 
           {(error || submitError) && (
@@ -84,10 +102,10 @@ export default function LoginPage() {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ width: '100%' }}>
+          <Box component="form" onSubmit={(event) => void handleSubmit(onSubmit)(event)} sx={{ width: '100%' }}>
             <TextField
               {...register('email')}
-              label="Email"
+              label={t('auth.fields.email')}
               type="email"
               fullWidth
               margin="normal"
@@ -100,7 +118,7 @@ export default function LoginPage() {
 
             <TextField
               {...register('password')}
-              label="Password"
+              label={t('auth.fields.password')}
               type="password"
               fullWidth
               margin="normal"
@@ -118,14 +136,14 @@ export default function LoginPage() {
               sx={{ mt: 3, mb: 2 }}
               disabled={isLoading}
             >
-              {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
+              {isLoading ? <CircularProgress size={24} /> : t('common.signIn')}
             </Button>
 
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2">
-                Don't have an account?{' '}
+                {t('auth.login.noAccount')}{' '}
                 <MuiLink component={Link} to="/register" underline="hover">
-                  Sign Up
+                  {t('common.signUp')}
                 </MuiLink>
               </Typography>
             </Box>

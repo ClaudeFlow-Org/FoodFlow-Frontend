@@ -16,8 +16,10 @@ import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/c
 import { dishService } from '@/services';
 import type { Dish, Column } from '@/types';
 import { Restaurant } from '@mui/icons-material';
+import { useI18n } from '@/i18n';
 
 export default function DishesPage() {
+  const { t } = useI18n();
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -37,7 +39,7 @@ export default function DishesPage() {
   });
 
   useEffect(() => {
-    loadDishes();
+    void loadDishes();
   }, []);
 
   const loadDishes = async () => {
@@ -46,7 +48,7 @@ export default function DishesPage() {
       const data = await dishService.getAll();
       setDishes(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load dishes');
+      setError(err instanceof Error ? err.message : t('dishes.loadError'));
     } finally {
       setLoading(false);
     }
@@ -95,9 +97,9 @@ export default function DishesPage() {
       }
 
       handleCloseModal();
-      loadDishes();
+      void loadDishes();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save dish');
+      setError(err instanceof Error ? err.message : t('dishes.saveError'));
     }
   };
 
@@ -106,9 +108,9 @@ export default function DishesPage() {
       try {
         await dishService.delete(deleteConfirm.dish.id);
         setDeleteConfirm({ open: false, dish: null });
-        loadDishes();
+        void loadDishes();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to delete dish');
+        setError(err instanceof Error ? err.message : t('dishes.deleteError'));
       }
     }
   };
@@ -121,31 +123,31 @@ export default function DishesPage() {
   const columns: Column<Dish>[] = [
     {
       id: 'name',
-      label: 'Name',
+      label: t('dishes.name'),
       render: (row: Dish) => (
         <Box sx={{ fontWeight: 'medium' }}>{row.name}</Box>
       ),
     },
     {
       id: 'description',
-      label: 'Description',
+      label: t('dishes.description'),
       render: (row: Dish) => row.description || '-',
     },
     {
       id: 'price',
-      label: 'Price',
+      label: t('dishes.price'),
       render: (row: Dish) => `$${row.price.toFixed(2)}`,
     },
     {
       id: 'ingredients',
-      label: 'Ingredients',
+      label: t('dishes.ingredients'),
       render: (row: Dish) => (
         <Box>{row.ingredients}</Box>
       ),
     },
     {
       id: 'actions',
-      label: 'Actions',
+      label: t('common.actions'),
       render: (row: Dish) => (
         <Stack direction="row" spacing={1}>
           <IconButton size="small" onClick={() => handleOpenModal(row)}>
@@ -164,21 +166,21 @@ export default function DishesPage() {
   ];
 
   if (loading) {
-    return <Box>Loading...</Box>;
+    return <Box>{t('common.loading')}</Box>;
   }
 
   return (
     <Box>
       <PageHeader
-        title="Menu / Dishes"
-        subtitle="Manage your restaurant menu items"
+        title={t('dishes.title')}
+        subtitle={t('dishes.subtitle')}
         action={
           <Button
             variant="contained"
             startIcon={<Add />}
             onClick={() => handleOpenModal()}
           >
-            Add Dish
+            {t('dishes.add')}
           </Button>
         }
       />
@@ -187,7 +189,7 @@ export default function DishesPage() {
 
       <Box sx={{ mb: 3 }}>
         <TextField
-          placeholder="Search dishes..."
+          placeholder={t('dishes.search')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           InputProps={{
@@ -200,12 +202,12 @@ export default function DishesPage() {
       {filteredDishes.length === 0 ? (
         <EmptyState
           icon={<Restaurant fontSize="large" />}
-          title={search ? 'No dishes found' : 'No dishes yet'}
-          description={search ? 'Try a different search term' : 'Add your first dish to get started'}
+          title={search ? t('dishes.noFoundTitle') : t('dishes.emptyTitle')}
+          description={search ? t('dishes.noFoundDescription') : t('dishes.emptyDescription')}
           action={
             !search && (
               <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenModal()}>
-                Add Dish
+                {t('dishes.add')}
               </Button>
             )
           }
@@ -220,19 +222,19 @@ export default function DishesPage() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={openModal} onClose={handleCloseModal} maxWidth="sm" fullWidth>
-        <DialogTitle>{editDish ? 'Edit Dish' : 'Add New Dish'}</DialogTitle>
+        <DialogTitle>{editDish ? t('dishes.editTitle') : t('dishes.addTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {error && <Alert severity="error">{error}</Alert>}
             <TextField
-              label="Name"
+              label={t('dishes.name')}
               fullWidth
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
             />
             <TextField
-              label="Description"
+              label={t('dishes.description')}
               fullWidth
               multiline
               rows={2}
@@ -240,7 +242,7 @@ export default function DishesPage() {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
             <TextField
-              label="Price"
+              label={t('dishes.price')}
               type="number"
               fullWidth
               value={formData.price}
@@ -249,20 +251,20 @@ export default function DishesPage() {
               InputProps={{ startAdornment: '$' }}
             />
             <TextField
-              label="Ingredients"
+              label={t('dishes.ingredients')}
               fullWidth
               multiline
               rows={2}
               value={formData.ingredients}
               onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
-              placeholder="e.g., tomato, cheese, basil"
+              placeholder={t('dishes.ingredientsPlaceholder')}
             />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseModal}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained">
-            {editDish ? 'Update' : 'Create'}
+          <Button onClick={handleCloseModal}>{t('common.cancel')}</Button>
+          <Button onClick={() => void handleSubmit()} variant="contained">
+            {editDish ? t('common.update') : t('common.create')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -270,9 +272,9 @@ export default function DishesPage() {
       {/* Delete Confirmation */}
       <ConfirmDialog
         open={deleteConfirm.open}
-        title="Delete Dish"
-        message={`Are you sure you want to delete "${deleteConfirm.dish?.name}"? This action cannot be undone.`}
-        onConfirm={handleDelete}
+        title={t('dishes.deleteTitle')}
+        message={t('dishes.deleteMessage', { name: deleteConfirm.dish?.name || '' })}
+        onConfirm={() => void handleDelete()}
         onCancel={() => setDeleteConfirm({ open: false, dish: null })}
       />
     </Box>

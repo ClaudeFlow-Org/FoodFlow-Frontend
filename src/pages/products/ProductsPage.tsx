@@ -18,8 +18,10 @@ import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/c
 import { productService } from '@/services';
 import type { Product, Column } from '@/types';
 import { Inventory2Outlined } from '@mui/icons-material';
+import { useI18n } from '@/i18n';
 
 export default function ProductsPage() {
+  const { t } = useI18n();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -43,7 +45,7 @@ export default function ProductsPage() {
   });
 
   useEffect(() => {
-    loadProducts();
+    void loadProducts();
   }, []);
 
   const loadProducts = async () => {
@@ -52,7 +54,7 @@ export default function ProductsPage() {
       const data = await productService.getAll();
       setProducts(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load products');
+      setError(err instanceof Error ? err.message : t('products.loadError'));
     } finally {
       setLoading(false);
     }
@@ -113,9 +115,9 @@ export default function ProductsPage() {
       }
 
       handleCloseModal();
-      loadProducts();
+      void loadProducts();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save product');
+      setError(err instanceof Error ? err.message : t('products.saveError'));
     }
   };
 
@@ -124,9 +126,9 @@ export default function ProductsPage() {
       try {
         await productService.delete(deleteConfirm.product.id);
         setDeleteConfirm({ open: false, product: null });
-        loadProducts();
+        void loadProducts();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to delete product');
+        setError(err instanceof Error ? err.message : t('products.deleteError'));
       }
     }
   };
@@ -143,7 +145,7 @@ export default function ProductsPage() {
   const columns: Column<Product>[] = [
     {
       id: 'name',
-      label: 'Product',
+      label: t('products.product'),
       render: (row: Product) => (
         <Box>
           <Box sx={{ fontWeight: 'medium', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -158,7 +160,7 @@ export default function ProductsPage() {
     },
     {
       id: 'stock',
-      label: 'Stock Level',
+      label: t('products.stockLevel'),
       render: (row: Product) => (
         <Chip
           label={`${row.stockLevel} ${row.unitOfMeasure}`}
@@ -169,22 +171,22 @@ export default function ProductsPage() {
     },
     {
       id: 'unitCost',
-      label: 'Unit Cost',
+      label: t('products.unitCost'),
       render: (row: Product) => `$${row.unitCost.toFixed(2)}`,
     },
     {
       id: 'value',
-      label: 'Total Value',
+      label: t('products.totalValue'),
       render: (row: Product) => `$${(row.stockLevel * row.unitCost).toFixed(2)}`,
     },
     {
       id: 'supplier',
-      label: 'Supplier',
+      label: t('products.supplier'),
       render: (row: Product) => row.supplier || '-',
     },
     {
       id: 'actions',
-      label: 'Actions',
+      label: t('common.actions'),
       render: (row: Product) => (
         <Stack direction="row" spacing={1}>
           <IconButton size="small" onClick={() => handleOpenModal(row)}>
@@ -205,28 +207,28 @@ export default function ProductsPage() {
   const lowStockCount = products.filter((p) => isLowStock(p)).length;
 
   if (loading) {
-    return <Box>Loading...</Box>;
+    return <Box>{t('common.loading')}</Box>;
   }
 
   return (
     <Box>
       <PageHeader
-        title="Inventory"
-        subtitle="Manage your restaurant inventory and supplies"
+        title={t('products.title')}
+        subtitle={t('products.subtitle')}
         action={
           <Button
             variant="contained"
             startIcon={<Add />}
             onClick={() => handleOpenModal()}
           >
-            Add Product
+            {t('products.add')}
           </Button>
         }
       />
 
       {lowStockCount > 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          {lowStockCount} product{lowStockCount > 1 ? 's are' : ' is'} running low on stock
+          {t('products.lowStockAlert', { count: lowStockCount })}
         </Alert>
       )}
 
@@ -234,7 +236,7 @@ export default function ProductsPage() {
 
       <Box sx={{ mb: 3 }}>
         <TextField
-          placeholder="Search products..."
+          placeholder={t('products.search')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           InputProps={{
@@ -247,12 +249,12 @@ export default function ProductsPage() {
       {filteredProducts.length === 0 ? (
         <EmptyState
           icon={<Inventory2Outlined fontSize="large" />}
-          title={search ? 'No products found' : 'No products yet'}
-          description={search ? 'Try a different search term' : 'Add your first product to start tracking inventory'}
+          title={search ? t('products.noFoundTitle') : t('products.emptyTitle')}
+          description={search ? t('products.noFoundDescription') : t('products.emptyDescription')}
           action={
             !search && (
               <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenModal()}>
-                Add Product
+                {t('products.add')}
               </Button>
             )
           }
@@ -267,19 +269,19 @@ export default function ProductsPage() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={openModal} onClose={handleCloseModal} maxWidth="sm" fullWidth>
-        <DialogTitle>{editProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+        <DialogTitle>{editProduct ? t('products.editTitle') : t('products.addTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {error && <Alert severity="error">{error}</Alert>}
             <TextField
-              label="Product Name"
+              label={t('products.name')}
               fullWidth
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
             />
             <TextField
-              label="Description"
+              label={t('products.description')}
               fullWidth
               multiline
               rows={2}
@@ -288,7 +290,7 @@ export default function ProductsPage() {
             />
             <Stack direction="row" spacing={2}>
               <TextField
-                label="Stock Level"
+                label={t('products.stockLevel')}
                 type="number"
                 fullWidth
                 value={formData.stockLevel}
@@ -296,16 +298,16 @@ export default function ProductsPage() {
                 required
               />
               <TextField
-                label="Unit of Measure"
+                label={t('products.unitOfMeasure')}
                 fullWidth
                 value={formData.unitOfMeasure}
                 onChange={(e) => setFormData({ ...formData, unitOfMeasure: e.target.value })}
-                placeholder="e.g., kg, liters, units"
+                placeholder={t('products.unitOfMeasurePlaceholder')}
                 required
               />
             </Stack>
             <TextField
-              label="Unit Cost"
+              label={t('products.unitCost')}
               type="number"
               fullWidth
               value={formData.unitCost}
@@ -316,22 +318,22 @@ export default function ProductsPage() {
               }}
             />
             <TextField
-              label="Low Stock Threshold"
+              label={t('products.lowStockThreshold')}
               type="number"
               fullWidth
               value={formData.lowStockThreshold}
               onChange={(e) => setFormData({ ...formData, lowStockThreshold: e.target.value })}
-              helperText="Alert when stock falls below this level"
+              helperText={t('products.lowStockHelp')}
             />
             <TextField
-              label="Category"
+              label={t('products.category')}
               fullWidth
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              placeholder="e.g., Produce, Dairy, Meat"
+              placeholder={t('products.categoryPlaceholder')}
             />
             <TextField
-              label="Supplier"
+              label={t('products.supplier')}
               fullWidth
               value={formData.supplier}
               onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
@@ -339,9 +341,9 @@ export default function ProductsPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseModal}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained">
-            {editProduct ? 'Update' : 'Create'}
+          <Button onClick={handleCloseModal}>{t('common.cancel')}</Button>
+          <Button onClick={() => void handleSubmit()} variant="contained">
+            {editProduct ? t('common.update') : t('common.create')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -349,9 +351,9 @@ export default function ProductsPage() {
       {/* Delete Confirmation */}
       <ConfirmDialog
         open={deleteConfirm.open}
-        title="Delete Product"
-        message={`Are you sure you want to delete "${deleteConfirm.product?.name}"? This action cannot be undone.`}
-        onConfirm={handleDelete}
+        title={t('products.deleteTitle')}
+        message={t('products.deleteMessage', { name: deleteConfirm.product?.name || '' })}
+        onConfirm={() => void handleDelete()}
         onCancel={() => setDeleteConfirm({ open: false, product: null })}
       />
     </Box>

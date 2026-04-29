@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { subscriptionService } from '@/services';
 import type { SubscriptionPlan, UserSubscription, SubscribeRequest } from '@/types';
+import { useI18n } from '@/i18n';
 
 export function useSubscription() {
+  const { t } = useI18n();
   const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +17,7 @@ export function useSubscription() {
       const data = await subscriptionService.getPlans();
       setPlans(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load plans');
+      setError(err instanceof Error ? err.message : t('settings.loadSubscriptionError'));
     } finally {
       setLoading(false);
     }
@@ -28,7 +30,7 @@ export function useSubscription() {
       const data = await subscriptionService.getCurrentSubscription();
       setCurrentSubscription(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load subscription');
+      setError(err instanceof Error ? err.message : t('settings.loadSubscriptionError'));
     } finally {
       setLoading(false);
     }
@@ -40,7 +42,7 @@ export function useSubscription() {
       const data = await subscriptionService.subscribe(request);
       setCurrentSubscription(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to subscribe');
+      setError(err instanceof Error ? err.message : t('settings.subscriptionUpdateError'));
       throw err;
     }
   };
@@ -51,14 +53,14 @@ export function useSubscription() {
       await subscriptionService.cancelSubscription();
       await loadCurrentSubscription();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel subscription');
+      setError(err instanceof Error ? err.message : t('settings.subscriptionUpdateError'));
       throw err;
     }
   };
 
   useEffect(() => {
-    loadPlans();
-    loadCurrentSubscription();
+    void loadPlans();
+    void loadCurrentSubscription();
   }, []);
 
   return {

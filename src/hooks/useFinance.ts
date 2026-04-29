@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { financeService } from '@/services';
 import type { DashboardMetrics, FinancialReport, ReportPeriod } from '@/types';
+import { useI18n } from '@/i18n';
 
 export function useFinance() {
+  const { t } = useI18n();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [report, setReport] = useState<FinancialReport | null>(null);
   const [period, setPeriod] = useState<ReportPeriod>('WEEKLY');
@@ -16,7 +18,7 @@ export function useFinance() {
       const data = await financeService.getDashboardMetrics();
       setMetrics(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+      setError(err instanceof Error ? err.message : t('dashboard.loadError'));
     } finally {
       setLoading(false);
     }
@@ -30,14 +32,14 @@ export function useFinance() {
       setReport(data);
       setPeriod(reportPeriod);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load report');
+      setError(err instanceof Error ? err.message : t('finance.loadError'));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadDashboard();
+    void loadDashboard();
   }, []);
 
   return {

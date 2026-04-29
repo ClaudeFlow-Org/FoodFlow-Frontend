@@ -28,24 +28,29 @@ import {
   Logout as LogoutIcon,
 } from '@mui/icons-material';
 import { useAuthStore } from '@/store/authStore';
+import { AppControls } from '@/components/common';
+import { useI18n } from '@/i18n';
 
 const drawerWidth = 240;
+const brandLogoSrc = '/foodflow-mark.png';
 
 const menuItems = [
-  { icon: <DashboardIcon />, label: 'Dashboard', path: '/dashboard' },
-  { icon: <RestaurantIcon />, label: 'Menu / Dishes', path: '/dishes' },
-  { icon: <InventoryIcon />, label: 'Inventory', path: '/products' },
-  { icon: <ReceiptIcon />, label: 'Orders', path: '/orders' },
-  { icon: <FinanceIcon />, label: 'Finance', path: '/finance' },
-  { icon: <SettingsIcon />, label: 'Settings', path: '/settings' },
+  { icon: <DashboardIcon />, labelKey: 'nav.dashboard', path: '/dashboard' },
+  { icon: <RestaurantIcon />, labelKey: 'nav.dishes', path: '/dishes' },
+  { icon: <InventoryIcon />, labelKey: 'nav.inventory', path: '/products' },
+  { icon: <ReceiptIcon />, labelKey: 'nav.orders', path: '/orders' },
+  { icon: <FinanceIcon />, labelKey: 'nav.finance', path: '/finance' },
+  { icon: <SettingsIcon />, labelKey: 'nav.settings', path: '/settings' },
 ];
 
 export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
+  const { t } = useI18n();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const currentMenuItem = menuItems.find((item) => item.path === location.pathname);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -62,15 +67,23 @@ export default function MainLayout() {
   const handleLogout = () => {
     logout();
     handleMenuClose();
-    navigate('/login');
+    void navigate('/login');
   };
 
   const drawer = (
     <Box>
       <Toolbar>
-        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-          FoodFlow
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+          <Box
+            component="img"
+            src={brandLogoSrc}
+            alt=""
+            sx={{ width: 34, height: 34, objectFit: 'contain' }}
+          />
+          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+            {t('app.name')}
+          </Typography>
+        </Box>
       </Toolbar>
       <Divider />
       <List>
@@ -79,12 +92,12 @@ export default function MainLayout() {
             <ListItemButton
               selected={location.pathname === item.path}
               onClick={() => {
-                navigate(item.path);
+                void navigate(item.path);
                 setMobileOpen(false);
               }}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.label} />
+              <ListItemText primary={t(item.labelKey)} />
             </ListItemButton>
           </ListItem>
         ))}
@@ -103,6 +116,7 @@ export default function MainLayout() {
       >
         <Toolbar>
           <IconButton
+            aria-label={t('nav.openMenu')}
             color="inherit"
             edge="start"
             onClick={handleDrawerToggle}
@@ -111,13 +125,16 @@ export default function MainLayout() {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {menuItems.find((item) => item.path === location.pathname)?.label || 'FoodFlow'}
+            {currentMenuItem ? t(currentMenuItem.labelKey) : t('app.name')}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+              <AppControls />
+            </Box>
             <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
               {user?.name}
             </Typography>
-            <IconButton onClick={handleMenuOpen} size="small">
+            <IconButton aria-label={t('nav.accountMenu')} onClick={handleMenuOpen} size="small">
               <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
                 {user?.name?.charAt(0).toUpperCase()}
               </Avatar>
@@ -130,12 +147,15 @@ export default function MainLayout() {
               transformOrigin={{ horizontal: 'right', vertical: 'top' }}
               anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
             >
-              <MenuItem onClick={() => navigate('/settings')}>Settings</MenuItem>
+              <MenuItem onClick={() => void navigate('/settings')}>{t('nav.settings')}</MenuItem>
+              <MenuItem sx={{ display: { sm: 'none' } }}>
+                <AppControls compact />
+              </MenuItem>
               <MenuItem onClick={handleLogout}>
                 <ListItemIcon>
                   <LogoutIcon fontSize="small" />
                 </ListItemIcon>
-                Logout
+                {t('nav.logout')}
               </MenuItem>
             </Menu>
           </Box>

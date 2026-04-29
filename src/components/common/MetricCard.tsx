@@ -1,5 +1,6 @@
 import { Card, CardContent, Typography, Box, SxProps } from '@mui/material';
 import { TrendingUp, TrendingDown } from '@mui/icons-material';
+import { alpha, useTheme } from '@mui/material/styles';
 
 interface MetricCardProps {
   title: string;
@@ -13,15 +14,12 @@ interface MetricCardProps {
   sx?: SxProps;
 }
 
-const colorMap = {
-  success: { main: '#4caf50', light: '#e8f5e9' },
-  error: { main: '#f44336', light: '#ffebee' },
-  info: { main: '#2196f3', light: '#e3f2fd' },
-  warning: { main: '#ff9800', light: '#fff3e0' },
-};
-
 export function MetricCard({ title, value, subtitle, trend, color = 'info', sx }: MetricCardProps) {
-  const colors = colorMap[color];
+  const theme = useTheme();
+  const colors = {
+    main: theme.palette[color].main,
+    light: alpha(theme.palette[color].main, theme.palette.mode === 'dark' ? 0.18 : 0.12),
+  };
   const isPositive = trend && trend.value >= 0;
 
   return (

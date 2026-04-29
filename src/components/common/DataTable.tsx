@@ -10,6 +10,7 @@ import {
   SxProps,
 } from '@mui/material';
 import { ChangeEvent, useState } from 'react';
+import { useI18n } from '@/i18n';
 
 export interface Column<T> {
   id: string;
@@ -26,7 +27,8 @@ interface DataTableProps<T> {
   sx?: SxProps;
 }
 
-export function DataTable<T>({ columns, rows, rowId, emptyMessage = 'No data available', sx }: DataTableProps<T>) {
+export function DataTable<T>({ columns, rows, rowId, emptyMessage, sx }: DataTableProps<T>) {
+  const { t } = useI18n();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -60,7 +62,7 @@ export function DataTable<T>({ columns, rows, rowId, emptyMessage = 'No data ava
           {rows.length === 0 ? (
             <TableRow>
               <TableCell colSpan={columns.length} align="center" sx={{ py: 4 }}>
-                {emptyMessage}
+                {emptyMessage || t('common.noData')}
               </TableCell>
             </TableRow>
           ) : (
@@ -83,11 +85,19 @@ export function DataTable<T>({ columns, rows, rowId, emptyMessage = 'No data ava
         </TableBody>
       </Table>
       <TablePagination
-        rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
+        rowsPerPageOptions={[5, 10, 25, { label: t('common.all'), value: -1 }]}
         component="div"
         count={rows.length}
         rowsPerPage={rowsPerPage}
         page={page}
+        labelRowsPerPage={t('common.rowsPerPage')}
+        labelDisplayedRows={({ from, to, count }) =>
+          t('common.displayedRows', {
+            from,
+            to,
+            count: count === -1 ? t('common.moreThan', { count: to }) : count,
+          })
+        }
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
       />

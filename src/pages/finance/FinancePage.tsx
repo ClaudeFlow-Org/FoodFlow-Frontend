@@ -25,8 +25,9 @@ import {
 import { PageHeader, MetricCard, EmptyState } from '@/components/common';
 import { financeService } from '@/services';
 import type { DashboardMetrics, FinancialReport, ReportPeriod } from '@/types';
+import { useI18n } from '@/i18n';
 
-const COLORS = ['#2196f3', '#4caf50', '#ff9800', '#f44336', '#9c27b0', '#00bcd4'];
+const COLORS = ['#f2811d', '#c45c3e', '#2d2620', '#ff833a', '#8f4a32', '#6b5f52'];
 
 interface ChartData {
   name: string;
@@ -36,6 +37,7 @@ interface ChartData {
 }
 
 export default function FinancePage() {
+  const { t } = useI18n();
   const [period, setPeriod] = useState<ReportPeriod>('WEEKLY');
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [report, setReport] = useState<FinancialReport | null>(null);
@@ -43,7 +45,7 @@ export default function FinancePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, [period]);
 
   const loadData = async () => {
@@ -57,7 +59,7 @@ export default function FinancePage() {
       setMetrics(metricsData);
       setReport(reportData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load financial data');
+      setError(err instanceof Error ? err.message : t('finance.loadError'));
     } finally {
       setLoading(false);
     }
@@ -69,7 +71,7 @@ export default function FinancePage() {
   };
 
   const chartData: ChartData[] | undefined = report?.incomeByCategory?.map((cat, i) => ({
-    name: cat.category,
+    name: cat.category === 'Income' ? t('finance.income') : cat.category,
     income: cat.amount,
     expenses: report.expensesByCategory?.[i]?.amount || 0,
     profit: cat.amount - (report.expensesByCategory?.[i]?.amount || 0),
@@ -89,7 +91,7 @@ export default function FinancePage() {
   if (loading) {
     return (
       <Box>
-        <PageHeader title="Finance" subtitle="Financial reports and analytics" />
+        <PageHeader title={t('finance.title')} subtitle={t('finance.subtitle')} />
         <Stack spacing={2}>
           <Skeleton variant="rectangular" height={100} />
           <Skeleton variant="rectangular" height={300} />
@@ -101,7 +103,7 @@ export default function FinancePage() {
   if (error) {
     return (
       <Box>
-        <PageHeader title="Finance" subtitle="Financial reports and analytics" />
+        <PageHeader title={t('finance.title')} subtitle={t('finance.subtitle')} />
         <Alert severity="error">{error}</Alert>
       </Box>
     );
@@ -110,10 +112,10 @@ export default function FinancePage() {
   if (!metrics || !report) {
     return (
       <Box>
-        <PageHeader title="Finance" subtitle="Financial reports and analytics" />
+        <PageHeader title={t('finance.title')} subtitle={t('finance.subtitle')} />
         <EmptyState
-          title="No financial data available"
-          description="Start creating orders to see your financial reports"
+          title={t('finance.noDataTitle')}
+          description={t('finance.noDataDescription')}
         />
       </Box>
     );
@@ -122,27 +124,27 @@ export default function FinancePage() {
   return (
     <Box>
       <PageHeader
-        title="Finance"
-        subtitle="Financial reports and analytics"
+        title={t('finance.title')}
+        subtitle={t('finance.subtitle')}
         action={
           <ButtonGroup variant="outlined" size="small">
             <Button
               onClick={() => setPeriod('DAILY')}
               variant={period === 'DAILY' ? 'contained' : 'outlined'}
             >
-              Daily
+              {t('finance.daily')}
             </Button>
             <Button
               onClick={() => setPeriod('WEEKLY')}
               variant={period === 'WEEKLY' ? 'contained' : 'outlined'}
             >
-              Weekly
+              {t('finance.weekly')}
             </Button>
             <Button
               onClick={() => setPeriod('MONTHLY')}
               variant={period === 'MONTHLY' ? 'contained' : 'outlined'}
             >
-              Monthly
+              {t('finance.monthly')}
             </Button>
           </ButtonGroup>
         }
@@ -151,39 +153,39 @@ export default function FinancePage() {
       {/* Metrics Cards */}
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3 }}>
         <MetricCard
-          title="Total Income"
+          title={t('finance.totalIncome')}
           value={formatCurrency(report.totalIncome)}
-          color="success"
+          color="warning"
           trend={
             report.previousPeriodComparison
-              ? { value: report.previousPeriodComparison.incomeChange, label: 'vs prev period' }
+              ? { value: report.previousPeriodComparison.incomeChange, label: t('finance.vsPrevious') }
               : undefined
           }
         />
         <MetricCard
-          title="Total Expenses"
+          title={t('finance.totalExpenses')}
           value={formatCurrency(report.totalExpenses)}
           color="error"
           trend={
             report.previousPeriodComparison
-              ? { value: -report.previousPeriodComparison.expenseChange, label: 'vs prev period' }
+              ? { value: -report.previousPeriodComparison.expenseChange, label: t('finance.vsPrevious') }
               : undefined
           }
         />
         <MetricCard
-          title="Profit"
+          title={t('finance.profit')}
           value={formatCurrency(report.profit)}
           color="info"
           trend={
             report.previousPeriodComparison
-              ? { value: report.previousPeriodComparison.profitChange, label: 'vs prev period' }
+              ? { value: report.previousPeriodComparison.profitChange, label: t('finance.vsPrevious') }
               : undefined
           }
         />
         <MetricCard
-          title="Orders"
+          title={t('finance.orders')}
           value={metrics.orderCount}
-          subtitle="Total orders"
+          subtitle={t('finance.totalOrders')}
           color="warning"
         />
       </Stack>
@@ -195,7 +197,7 @@ export default function FinancePage() {
           <CardContent>
             <Box sx={{ mb: 2 }}>
               <Box component="h3" sx={{ fontSize: '1.25rem', fontWeight: 'bold', m: 0 }}>
-                Income vs Expenses by Category
+                {t('finance.incomeVsExpenses')}
               </Box>
             </Box>
             {chartData && chartData.length > 0 ? (
@@ -206,14 +208,14 @@ export default function FinancePage() {
                   <YAxis tickFormatter={formatCurrency} />
                   <Tooltip formatter={(value) => (typeof value === 'number' ? formatCurrency(value) : value)} />
                   <Legend />
-                  <Bar dataKey="income" fill="#4caf50" name="Income" />
-                  <Bar dataKey="expenses" fill="#f44336" name="Expenses" />
-                  <Bar dataKey="profit" fill="#2196f3" name="Profit" />
+                  <Bar dataKey="income" fill="#f2811d" name={t('finance.income')} />
+                  <Bar dataKey="expenses" fill="#c45c3e" name={t('finance.expenses')} />
+                  <Bar dataKey="profit" fill="#2d2620" name={t('finance.profit')} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
               <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                No data available
+                {t('finance.noData')}
               </Box>
             )}
           </CardContent>
@@ -225,7 +227,7 @@ export default function FinancePage() {
             <CardContent>
               <Box sx={{ mb: 2 }}>
                 <Box component="h3" sx={{ fontSize: '1.25rem', fontWeight: 'bold', m: 0 }}>
-                  Top Dishes by Revenue
+                  {t('finance.topDishesRevenue')}
                 </Box>
               </Box>
               {topDishesData && topDishesData.length > 0 ? (
@@ -235,12 +237,12 @@ export default function FinancePage() {
                     <XAxis type="number" tickFormatter={formatCurrency} />
                     <YAxis dataKey="name" type="category" width={100} />
                     <Tooltip formatter={(value) => (typeof value === 'number' ? formatCurrency(value) : value)} />
-                    <Bar dataKey="revenue" fill="#2196f3" />
+                    <Bar dataKey="revenue" fill="#f2811d" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
                 <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  No dish data available
+                  {t('finance.noDishData')}
                 </Box>
               )}
             </CardContent>
@@ -251,7 +253,7 @@ export default function FinancePage() {
             <CardContent>
               <Box sx={{ mb: 2 }}>
                 <Box component="h3" sx={{ fontSize: '1.25rem', fontWeight: 'bold', m: 0 }}>
-                  Expenses Breakdown
+                  {t('finance.expensesBreakdown')}
                 </Box>
               </Box>
               {expensePieData && expensePieData.length > 0 ? (
@@ -264,7 +266,7 @@ export default function FinancePage() {
                       labelLine={false}
                       label={({ name, percent }) => `${name}: ${percent ? (percent * 100).toFixed(0) : 0}%`}
                       outerRadius={80}
-                      fill="#8884d8"
+                      fill="#f2811d"
                       dataKey="value"
                     >
                       {expensePieData.map((_entry, index) => (
@@ -276,7 +278,7 @@ export default function FinancePage() {
                 </ResponsiveContainer>
               ) : (
                 <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  No expense data available
+                  {t('finance.noExpenseData')}
                 </Box>
               )}
             </CardContent>

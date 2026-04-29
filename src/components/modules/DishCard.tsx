@@ -1,6 +1,7 @@
 import { Card, CardContent, Typography, Box, SxProps } from '@mui/material';
 import { Restaurant } from '@mui/icons-material';
 import type { Dish } from '@/types';
+import { useI18n } from '@/i18n';
 
 interface DishCardProps {
   dish: Dish;
@@ -9,6 +10,8 @@ interface DishCardProps {
 }
 
 export function DishCard({ dish, onClick, sx }: DishCardProps) {
+  const { t } = useI18n();
+
   return (
     <Card
       sx={{
@@ -57,7 +60,7 @@ export function DishCard({ dish, onClick, sx }: DishCardProps) {
         {dish.ingredients && dish.ingredients.length > 0 && (
           <Box sx={{ mt: 1 }}>
             <Typography variant="caption" color="text.secondary">
-              Ingredients: {dish.ingredients}
+              {t('dishes.ingredientsLabel', { ingredients: dish.ingredients })}
             </Typography>
           </Box>
         )}

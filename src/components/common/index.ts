@@ -8,4 +8,5 @@ export { EmptyState } from './EmptyState';
 export { ErrorAlert } from './ErrorAlert';
 export { CloseIconButton } from './CloseIconButton';
 export { DataTable } from './DataTable';
+export { AppControls } from './AppControls';
 export type { Column } from './DataTable';

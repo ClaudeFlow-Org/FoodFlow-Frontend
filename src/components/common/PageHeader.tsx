@@ -10,14 +10,19 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle, action, sx }: PageHeaderProps) {
   return (
-    <Box sx={{ mb: 3, ...sx }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+    <Box sx={{ mb: 4, ...sx }}>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between"
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        spacing={2}
+      >
         <Box>
-          <Typography variant="h4" component="h1">
+          <Typography variant="h4" component="h1" sx={{ color: 'text.primary' }}>
             {title}
           </Typography>
           {subtitle && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            <Typography variant="body1" color="text.secondary" sx={{ mt: 0.75, maxWidth: 720 }}>
               {subtitle}
             </Typography>
           )}
