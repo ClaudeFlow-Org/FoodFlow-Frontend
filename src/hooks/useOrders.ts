@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { orderService } from '@/services';
 import type { Order, CreateOrderRequest } from '@/types';
+import { useI18n } from '@/i18n';
 
 export function useOrders() {
+  const { t } = useI18n();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +16,7 @@ export function useOrders() {
       const data = await orderService.getAll();
       setOrders(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load orders');
+      setError(err instanceof Error ? err.message : t('orders.loadError'));
     } finally {
       setLoading(false);
     }
@@ -22,12 +24,12 @@ export function useOrders() {
 
   const createOrder = async (data: CreateOrderRequest) => {
     await orderService.create(data);
-    loadOrders();
+    void loadOrders();
   };
 
   const deleteOrder = async (id: number) => {
     await orderService.delete(id);
-    loadOrders();
+    void loadOrders();
   };
 
   const getRecentOrders = (count: number = 5) => {
@@ -39,7 +41,7 @@ export function useOrders() {
   };
 
   useEffect(() => {
-    loadOrders();
+    void loadOrders();
   }, []);
 
   return {

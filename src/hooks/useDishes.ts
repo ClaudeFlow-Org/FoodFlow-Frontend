@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { dishService } from '@/services';
 import type { Dish, CreateDishRequest, UpdateDishRequest } from '@/types';
+import { useI18n } from '@/i18n';
 
 export function useDishes() {
+  const { t } = useI18n();
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +16,7 @@ export function useDishes() {
       const data = await dishService.getAll();
       setDishes(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load dishes');
+      setError(err instanceof Error ? err.message : t('dishes.loadError'));
     } finally {
       setLoading(false);
     }
@@ -22,21 +24,21 @@ export function useDishes() {
 
   const createDish = async (data: CreateDishRequest) => {
     await dishService.create(data);
-    loadDishes();
+    void loadDishes();
   };
 
   const updateDish = async (id: number, data: UpdateDishRequest) => {
     await dishService.update(id, data);
-    loadDishes();
+    void loadDishes();
   };
 
   const deleteDish = async (id: number) => {
     await dishService.delete(id);
-    loadDishes();
+    void loadDishes();
   };
 
   useEffect(() => {
-    loadDishes();
+    void loadDishes();
   }, []);
 
   return {

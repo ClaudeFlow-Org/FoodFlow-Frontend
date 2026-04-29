@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useI18n } from '@/i18n';
 
 interface UseApiResult<T> {
   data: T | null;
@@ -9,6 +10,7 @@ interface UseApiResult<T> {
 }
 
 export function useApi<T>(apiCall: () => Promise<T>): UseApiResult<T> {
+  const { t } = useI18n();
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,11 +22,11 @@ export function useApi<T>(apiCall: () => Promise<T>): UseApiResult<T> {
       const result = await apiCall();
       setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : t('common.errorOccurred'));
     } finally {
       setLoading(false);
     }
-  }, [apiCall]);
+  }, [apiCall, t]);
 
   const reset = useCallback(() => {
     setData(null);
