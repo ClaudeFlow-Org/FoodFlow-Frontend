@@ -37,7 +37,7 @@ export interface RegisterRequest {
 
 export interface LoginResponse {
   token: string;
-  type: string;
+  type?: string;
   user: User;
 }
 
@@ -49,7 +49,7 @@ export interface User {
   createdAt: string;
 }
 
-export type SubscriptionType = 'FREE' | 'PREMIUM' | 'ENTERPRISE';
+export type SubscriptionType = 'FREE' | 'STANDARD' | 'PREMIUM';
 
 export interface UpdateProfileRequest {
   name?: string;
@@ -155,14 +155,14 @@ export interface LineItem {
 }
 
 export interface CreateOrderRequest {
-  customerName?: string;
-  orderType: OrderType;
+  tableIdentifier: string;
   lineItems: CreateLineItemRequest[];
-  notes?: string;
 }
 
 export interface CreateLineItemRequest {
   dishId: number;
+  dishName?: string;
+  unitPrice: number;
   quantity: number;
 }
 
@@ -229,7 +229,7 @@ export interface SubscriptionPlan {
 }
 
 export interface UserSubscription {
-  id: number;
+  id: number | string;
   type: SubscriptionType;
   status: 'ACTIVE' | 'CANCELLED' | 'EXPIRED';
   startDate: string;
@@ -238,5 +238,5 @@ export interface UserSubscription {
 }
 
 export interface SubscribeRequest {
-  planId: number;
+  plan: SubscriptionType;
 }
