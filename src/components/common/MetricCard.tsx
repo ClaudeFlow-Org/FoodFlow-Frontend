@@ -26,16 +26,34 @@ export function MetricCard({ title, value, subtitle, trend, color = 'info', sx }
     <Card
       sx={{
         height: '100%',
+        minHeight: 152,
         bgcolor: colors.light,
         borderLeft: `4px solid ${colors.main}`,
+        overflow: 'hidden',
+        position: 'relative',
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          inset: '0 0 auto auto',
+          width: 96,
+          height: 96,
+          borderRadius: '50%',
+          bgcolor: alpha(colors.main, theme.palette.mode === 'dark' ? 0.14 : 0.08),
+          transform: 'translate(35%, -35%)',
+          pointerEvents: 'none',
+        },
         ...sx,
       }}
     >
-      <CardContent>
-        <Typography variant="body2" color="text.secondary" gutterBottom>
+      <CardContent sx={{ height: '100%', p: { xs: 2.25, sm: 2.5 }, position: 'relative', zIndex: 1 }}>
+        <Typography variant="body2" color="text.secondary" gutterBottom sx={{ fontWeight: 800 }}>
           {title}
         </Typography>
-        <Typography variant="h4" component="div" sx={{ color: colors.main, mb: 1, fontWeight: 'bold' }}>
+        <Typography
+          variant="h4"
+          component="div"
+          sx={{ color: colors.main, mb: 1, fontWeight: 850, lineHeight: 1.08 }}
+        >
           {typeof value === 'number' ? value.toLocaleString() : value}
         </Typography>
         {subtitle && (
@@ -44,11 +62,11 @@ export function MetricCard({ title, value, subtitle, trend, color = 'info', sx }
           </Typography>
         )}
         {trend && (
-          <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mt: 1.25, flexWrap: 'wrap', gap: 0.5 }}>
             {isPositive ? (
-              <TrendingUp sx={{ fontSize: 16, color: 'success.main', mr: 0.5 }} />
+              <TrendingUp sx={{ fontSize: 16, color: 'success.main' }} />
             ) : (
-              <TrendingDown sx={{ fontSize: 16, color: 'error.main', mr: 0.5 }} />
+              <TrendingDown sx={{ fontSize: 16, color: 'error.main' }} />
             )}
             <Typography
               variant="caption"
@@ -58,7 +76,7 @@ export function MetricCard({ title, value, subtitle, trend, color = 'info', sx }
               {isPositive ? '+' : ''}
               {trend.value}%
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+            <Typography variant="caption" color="text.secondary">
               {trend.label}
             </Typography>
           </Box>

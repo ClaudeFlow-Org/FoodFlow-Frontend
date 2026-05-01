@@ -35,7 +35,7 @@ interface TabPanelProps {
 function TabPanel({ children, value, index }: TabPanelProps) {
   return (
     <div role="tabpanel" hidden={value !== index}>
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ py: { xs: 2.5, sm: 3 } }}>{children}</Box>}
     </div>
   );
 }
@@ -155,7 +155,12 @@ export default function SettingsPage() {
       )}
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs value={tabValue} onChange={(_event, v: number) => setTabValue(v)}>
+        <Tabs
+          value={tabValue}
+          onChange={(_event, v: number) => setTabValue(v)}
+          variant="scrollable"
+          allowScrollButtonsMobile
+        >
           <Tab label={t('settings.tabs.profile')} />
           <Tab label={t('settings.tabs.security')} />
           <Tab label={t('settings.tabs.subscription')} />
@@ -164,10 +169,10 @@ export default function SettingsPage() {
 
       {/* Profile Tab */}
       <TabPanel value={tabValue} index={0}>
-        <Card sx={{ maxWidth: 600 }}>
-          <CardContent>
+        <Card sx={{ maxWidth: 640 }}>
+          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
             <Stack spacing={3}>
-              <Typography variant="h6">{t('settings.profileInfo')}</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 800 }}>{t('settings.profileInfo')}</Typography>
               <TextField
                 label={t('settings.name')}
                 fullWidth
@@ -211,10 +216,10 @@ export default function SettingsPage() {
 
       {/* Security Tab */}
       <TabPanel value={tabValue} index={1}>
-        <Card sx={{ maxWidth: 600 }}>
-          <CardContent>
+        <Card sx={{ maxWidth: 640 }}>
+          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
             <Stack spacing={3}>
-              <Typography variant="h6">{t('settings.passwordTitle')}</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 800 }}>{t('settings.passwordTitle')}</Typography>
               <TextField
                 label={t('settings.currentPassword')}
                 type="password"
@@ -266,11 +271,11 @@ export default function SettingsPage() {
               sx={{
                 bgcolor: 'primary.main',
                 color: 'primary.contrastText',
-                maxWidth: 600,
+                maxWidth: 640,
               }}
             >
-              <CardContent>
-                <Stack direction="row" alignItems="center" spacing={2}>
+              <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2}>
                   <Star />
                   <Box>
                     <Typography variant="h5">{getPlanName(subscription.plan)}</Typography>
@@ -281,7 +286,7 @@ export default function SettingsPage() {
                   <Chip
                     label={t(`subscription.status.${subscription.status}`)}
                     color={subscription.status === 'ACTIVE' ? 'success' : 'default'}
-                    sx={{ ml: 'auto' }}
+                    sx={{ ml: { sm: 'auto' } }}
                   />
                 </Stack>
               </CardContent>
@@ -289,22 +294,24 @@ export default function SettingsPage() {
           </Box>
         )}
 
-        <Typography variant="h6" gutterBottom>
+        <Typography variant="h6" gutterBottom sx={{ fontWeight: 800 }}>
           {t('settings.availablePlans')}
         </Typography>
-        <Grid container spacing={2}>
+        <Grid container spacing={2.5}>
           {plans.map((plan) => (
             <Grid size={{ xs: 12, md: 4 }} key={plan.id}>
               <Paper
                 sx={{
-                  p: 2,
+                  p: { xs: 2.5, sm: 3 },
                   height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
                   border: subscription?.plan.id === plan.id ? 2 : 1,
                   borderColor: subscription?.plan.id === plan.id ? 'primary.main' : 'divider',
                 }}
               >
-                <Stack spacing={2}>
-                  <Typography variant="h6">{getPlanName(plan)}</Typography>
+                <Stack spacing={2} sx={{ height: '100%' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800 }}>{getPlanName(plan)}</Typography>
                   <Typography variant="h4" color="primary.main">
                     {formatCurrency(plan.price)}
                     <Typography variant="body2" color="text.secondary">
@@ -321,6 +328,7 @@ export default function SettingsPage() {
                       </Stack>
                     ))}
                   </Stack>
+                  <Box sx={{ flexGrow: 1 }} />
                   <Button
                     variant={subscription?.plan.id === plan.id ? 'outlined' : 'contained'}
                     fullWidth

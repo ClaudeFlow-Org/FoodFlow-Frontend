@@ -68,9 +68,9 @@ export function LineItemEditor({ items, availableDishes, onChange, disabled }: L
   return (
     <Stack spacing={2}>
       {items.map((item, index) => (
-        <Paper key={index} sx={{ p: 2 }}>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <FormControl sx={{ flexGrow: 1 }} disabled={disabled}>
+        <Paper key={index} sx={{ p: { xs: 2, sm: 2.25 } }}>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }}>
+            <FormControl sx={{ flexGrow: 1, minWidth: { md: 260 } }} disabled={disabled}>
               <InputLabel>{t('orders.dish')}</InputLabel>
               <Select
                 value={item.dishId}
@@ -93,15 +93,15 @@ export function LineItemEditor({ items, availableDishes, onChange, disabled }: L
               InputProps={{
                 inputProps: { min: 1 },
               }}
-              sx={{ width: 100 }}
+              sx={{ width: { xs: '100%', md: 110 } }}
               disabled={disabled}
             />
 
-            <Typography variant="body2" sx={{ minWidth: 80 }}>
+            <Typography variant="body2" sx={{ minWidth: { md: 80 } }}>
               {formatCurrency(item.unitPrice)}
             </Typography>
 
-            <Typography variant="body2" fontWeight="medium" sx={{ minWidth: 80 }}>
+            <Typography variant="body2" fontWeight="medium" sx={{ minWidth: { md: 80 } }}>
               {formatCurrency(item.unitPrice * item.quantity)}
             </Typography>
 

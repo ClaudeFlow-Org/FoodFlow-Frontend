@@ -248,7 +248,7 @@ export default function OrdersPage() {
         }
       />
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2.5 }}>{error}</Alert>}
 
       {orders.length === 0 ? (
         <EmptyState
@@ -291,9 +291,9 @@ export default function OrdersPage() {
                 {t('orders.lineItems')}
               </Typography>
               {lineItems.map((item, index) => (
-                <Paper key={index} sx={{ p: 2, mb: 2 }}>
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    <FormControl sx={{ flexGrow: 1 }}>
+                <Paper key={index} sx={{ p: { xs: 2, sm: 2.25 }, mb: 2 }}>
+                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }}>
+                    <FormControl sx={{ flexGrow: 1, minWidth: { md: 280 } }}>
                       <InputLabel>{t('orders.dish')}</InputLabel>
                       <Select
                         value={item.dishId}
@@ -315,9 +315,9 @@ export default function OrdersPage() {
                       InputProps={{
                         inputProps: { min: 1 },
                       }}
-                      sx={{ width: 100 }}
+                      sx={{ width: { xs: '100%', md: 110 } }}
                     />
-                    <Typography variant="body2" sx={{ minWidth: 80 }}>
+                    <Typography variant="body2" sx={{ minWidth: { md: 88 }, fontWeight: 700 }}>
                       ${item.unitPrice.toFixed(2)}
                     </Typography>
                     <IconButton
@@ -339,17 +339,17 @@ export default function OrdersPage() {
               </Button>
             </Box>
 
-            <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Paper sx={{ p: { xs: 2, sm: 2.5 }, bgcolor: 'background.default' }}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
                 <Typography variant="h6">{t('orders.total')}</Typography>
-                <Typography variant="h4" color="primary.main">
+                <Typography variant="h4" color="primary.main" sx={{ fontWeight: 850, whiteSpace: 'nowrap' }}>
                   ${getTotal().toFixed(2)}
                 </Typography>
               </Stack>
             </Paper>
           </Stack>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ gap: 1 }}>
           <Button onClick={handleCloseModal}>{t('common.cancel')}</Button>
           <Button
             onClick={() => void handleSubmit()}

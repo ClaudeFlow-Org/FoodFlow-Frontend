@@ -24,21 +24,22 @@ export function OrderCard({ order, onClick, sx }: OrderCardProps) {
   return (
     <Card
       sx={{
+        height: '100%',
         cursor: onClick ? 'pointer' : 'default',
         transition: 'transform 0.2s, box-shadow 0.2s',
         '&:hover': onClick ? {
-          transform: 'translateY(-4px)',
+          transform: 'translateY(-3px)',
           boxShadow: 4,
         } : {},
         ...sx,
       }}
       onClick={onClick}
     >
-      <CardContent>
+      <CardContent sx={{ p: { xs: 2.25, sm: 2.5 } }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Receipt fontSize="small" color="action" />
-            <Typography variant="h6">
+            <Typography variant="h6" sx={{ fontWeight: 800 }}>
               #{order.orderNumber.slice(-6)}
             </Typography>
           </Box>
@@ -79,7 +80,7 @@ export function OrderCard({ order, onClick, sx }: OrderCardProps) {
             <Typography variant="body2" color="text.secondary">
               {t('orders.total')}
             </Typography>
-            <Typography variant="h6" color="primary.main">
+            <Typography variant="h6" color="primary.main" sx={{ fontWeight: 850 }}>
               {formatCurrency(order.totalAmount)}
             </Typography>
           </Box>

@@ -135,6 +135,7 @@ const buildTheme = (mode: ThemeMode) => {
               mode === 'dark'
                 ? `linear-gradient(180deg, ${brand.ink} 0%, #211b16 100%)`
                 : `linear-gradient(180deg, ${brand.cream} 0%, ${brand.warmWhite} 100%)`,
+            overflowX: 'hidden',
           },
           '::selection': {
             backgroundColor: alpha(brand.orange, 0.24),
@@ -166,6 +167,7 @@ const buildTheme = (mode: ThemeMode) => {
             backgroundImage: 'none',
             border: `1px solid ${divider}`,
             boxShadow: `0 18px 50px ${alpha(brand.ink, isDark ? 0.22 : 0.07)}`,
+            backgroundClip: 'padding-box',
           },
         },
       },
@@ -175,6 +177,10 @@ const buildTheme = (mode: ThemeMode) => {
             borderRadius: 22,
             border: `1px solid ${divider}`,
             boxShadow: `0 18px 50px ${alpha(brand.ink, isDark ? 0.22 : 0.07)}`,
+            backgroundImage: isDark
+              ? `linear-gradient(180deg, ${alpha('#ffffff', 0.045)} 0%, ${alpha('#ffffff', 0.018)} 100%)`
+              : `linear-gradient(180deg, #ffffff 0%, ${brand.warmWhite} 100%)`,
+            transition: 'box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease',
           },
         },
       },
@@ -186,6 +192,8 @@ const buildTheme = (mode: ThemeMode) => {
           root: {
             borderRadius: 999,
             paddingInline: 18,
+            minHeight: 40,
+            gap: 6,
           },
           containedPrimary: {
             boxShadow: `0 12px 24px ${alpha(brand.orange, isDark ? 0.22 : 0.18)}`,
@@ -207,6 +215,7 @@ const buildTheme = (mode: ThemeMode) => {
         styleOverrides: {
           root: {
             borderRadius: 14,
+            transition: 'background-color 160ms ease, color 160ms ease',
             '&:hover': {
               backgroundColor: alpha(brand.orange, isDark ? 0.14 : 0.08),
             },
@@ -244,6 +253,14 @@ const buildTheme = (mode: ThemeMode) => {
           },
         },
       },
+      MuiAlert: {
+        styleOverrides: {
+          root: {
+            borderRadius: 16,
+            alignItems: 'center',
+          },
+        },
+      },
       MuiTableContainer: {
         styleOverrides: {
           root: {
@@ -256,6 +273,20 @@ const buildTheme = (mode: ThemeMode) => {
         styleOverrides: {
           root: {
             backgroundColor: isDark ? alpha('#ffffff', 0.04) : brand.sand,
+          },
+        },
+      },
+      MuiTableCell: {
+        styleOverrides: {
+          root: {
+            borderColor: divider,
+            paddingBlock: 14,
+          },
+          head: {
+            color: textSecondary,
+            fontSize: '0.78rem',
+            fontWeight: 800,
+            textTransform: 'uppercase',
           },
         },
       },
@@ -272,6 +303,37 @@ const buildTheme = (mode: ThemeMode) => {
         styleOverrides: {
           paper: {
             borderRadius: 24,
+          },
+        },
+      },
+      MuiDialogTitle: {
+        styleOverrides: {
+          root: {
+            padding: '24px 24px 8px',
+            fontWeight: 800,
+          },
+        },
+      },
+      MuiDialogContent: {
+        styleOverrides: {
+          root: {
+            padding: '16px 24px 8px',
+          },
+        },
+      },
+      MuiDialogActions: {
+        styleOverrides: {
+          root: {
+            padding: '16px 24px 24px',
+          },
+        },
+      },
+      MuiTab: {
+        styleOverrides: {
+          root: {
+            minHeight: 44,
+            fontWeight: 800,
+            textTransform: 'none',
           },
         },
       },

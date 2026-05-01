@@ -227,12 +227,12 @@ export default function ProductsPage() {
       />
 
       {lowStockCount > 0 && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
+        <Alert severity="warning" sx={{ mb: 2.5 }}>
           {t('products.lowStockAlert', { count: lowStockCount })}
         </Alert>
       )}
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2.5 }}>{error}</Alert>}
 
       <Box sx={{ mb: 3 }}>
         <TextField
@@ -240,9 +240,13 @@ export default function ProductsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           InputProps={{
-            startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search color="action" />
+              </InputAdornment>
+            ),
           }}
-          sx={{ width: 300 }}
+          sx={{ width: { xs: '100%', sm: 360 } }}
         />
       </Box>
 
@@ -288,7 +292,7 @@ export default function ProductsPage() {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
-            <Stack direction="row" spacing={2}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
                 label={t('products.stockLevel')}
                 type="number"
@@ -340,7 +344,7 @@ export default function ProductsPage() {
             />
           </Stack>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ gap: 1 }}>
           <Button onClick={handleCloseModal}>{t('common.cancel')}</Button>
           <Button onClick={() => void handleSubmit()} variant="contained">
             {editProduct ? t('common.update') : t('common.create')}

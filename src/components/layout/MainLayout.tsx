@@ -31,7 +31,7 @@ import { useAuthStore } from '@/store/authStore';
 import { AppControls } from '@/components/common';
 import { useI18n } from '@/i18n';
 
-const drawerWidth = 240;
+const drawerWidth = 264;
 const brandLogoSrc = '/foodflow-mark.png';
 
 const menuItems = [
@@ -71,22 +71,22 @@ export default function MainLayout() {
   };
 
   const drawer = (
-    <Box>
-      <Toolbar>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Toolbar sx={{ minHeight: 76, px: 2.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
           <Box
             component="img"
             src={brandLogoSrc}
             alt=""
-            sx={{ width: 34, height: 34, objectFit: 'contain' }}
+            sx={{ width: 38, height: 38, objectFit: 'contain', flexShrink: 0 }}
           />
-          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 800, color: 'primary.main' }}>
             {t('app.name')}
           </Typography>
         </Box>
       </Toolbar>
       <Divider />
-      <List>
+      <List sx={{ px: 1.25, py: 1.5 }}>
         {menuItems.map((item) => (
           <ListItem key={item.path} disablePadding>
             <ListItemButton
@@ -95,9 +95,13 @@ export default function MainLayout() {
                 void navigate(item.path);
                 setMobileOpen(false);
               }}
+              sx={{ minHeight: 46, px: 1.5 }}
             >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={t(item.labelKey)} />
+              <ListItemIcon sx={{ minWidth: 38 }}>{item.icon}</ListItemIcon>
+              <ListItemText
+                primary={t(item.labelKey)}
+                primaryTypographyProps={{ fontWeight: location.pathname === item.path ? 800 : 650 }}
+              />
             </ListItemButton>
           </ListItem>
         ))}
@@ -106,7 +110,7 @@ export default function MainLayout() {
   );
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppBar
         position="fixed"
         sx={{
@@ -114,7 +118,7 @@ export default function MainLayout() {
           ml: { sm: `${drawerWidth}px` },
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{ minHeight: 72, px: { xs: 2, sm: 3 } }}>
           <IconButton
             aria-label={t('nav.openMenu')}
             color="inherit"
@@ -124,14 +128,24 @@ export default function MainLayout() {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 800, minWidth: 0 }}>
             {currentMenuItem ? t(currentMenuItem.labelKey) : t('app.name')}
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
             <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
               <AppControls />
             </Box>
-            <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
+            <Typography
+              variant="body2"
+              sx={{
+                display: { xs: 'none', md: 'block' },
+                maxWidth: 180,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                fontWeight: 700,
+              }}
+            >
               {user?.name}
             </Typography>
             <IconButton aria-label={t('nav.accountMenu')} onClick={handleMenuOpen} size="small">
@@ -192,9 +206,10 @@ export default function MainLayout() {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: { xs: 2, md: 3.5 },
           width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: 8,
+          mt: { xs: 7, sm: 8 },
+          minWidth: 0,
         }}
       >
         <Outlet />

@@ -18,10 +18,11 @@ export function ProductCard({ product, onClick, sx }: ProductCardProps) {
   return (
     <Card
       sx={{
+        height: '100%',
         cursor: onClick ? 'pointer' : 'default',
         transition: 'transform 0.2s, box-shadow 0.2s',
         '&:hover': onClick ? {
-          transform: 'translateY(-4px)',
+          transform: 'translateY(-3px)',
           boxShadow: 4,
         } : {},
         borderLeft: lowStock ? '4px solid' : '4px solid transparent',
@@ -30,13 +31,13 @@ export function ProductCard({ product, onClick, sx }: ProductCardProps) {
       }}
       onClick={onClick}
     >
-      <CardContent>
+      <CardContent sx={{ p: { xs: 2.25, sm: 2.5 } }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
           <Box
             sx={{
               width: 48,
               height: 48,
-              borderRadius: 2,
+              borderRadius: 3,
               bgcolor: lowStock ? 'warning.main' : 'info.main',
               display: 'flex',
               alignItems: 'center',
@@ -47,7 +48,7 @@ export function ProductCard({ product, onClick, sx }: ProductCardProps) {
             {lowStock ? <Warning /> : <Inventory2Outlined />}
           </Box>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="h6" noWrap>
+            <Typography variant="h6" noWrap sx={{ fontWeight: 800 }}>
               {product.name}
             </Typography>
             {product.category && (
@@ -57,7 +58,7 @@ export function ProductCard({ product, onClick, sx }: ProductCardProps) {
             )}
           </Box>
         </Box>
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
+        <Box sx={{ mt: 2.25, display: 'flex', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
           <Box>
             <Typography variant="body2" color="text.secondary">
               {t('products.stockLevel')}
