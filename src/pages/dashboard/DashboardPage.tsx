@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { AttachMoney, ShoppingCart, Restaurant } from '@mui/icons-material';
-import { MetricCard, DataTable, EmptyState } from '@/components/common';
+import { MetricCard, DataTable, EmptyState, PageHeader } from '@/components/common';
 import { financeService, orderService } from '@/services';
 import type { DashboardMetrics, Column, Order } from '@/types';
 import { useI18n } from '@/i18n';
@@ -128,9 +128,10 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <Box>
-        <Stack spacing={2}>
-          <Skeleton variant="rectangular" height={100} />
-          <Skeleton variant="rectangular" height={200} />
+        <PageHeader title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
+        <Stack spacing={2.5}>
+          <Skeleton variant="rounded" height={152} />
+          <Skeleton variant="rounded" height={220} />
         </Stack>
       </Box>
     );
@@ -142,44 +143,45 @@ export default function DashboardPage() {
 
   return (
     <Box>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          {t('dashboard.title')}
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          {t('dashboard.subtitle')}
-        </Typography>
-      </Box>
+      <PageHeader title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
 
       {metrics && (
         <>
           {/* Metrics Cards */}
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3 }}>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2.5} sx={{ mb: 3.5 }}>
             <MetricCard
               title={t('dashboard.totalIncome')}
               value={formatCurrency(metrics.totalIncome)}
               color="warning"
+              sx={{ flex: 1 }}
             />
             <MetricCard
               title={t('dashboard.totalExpenses')}
               value={formatCurrency(metrics.totalExpenses)}
               color="error"
+              sx={{ flex: 1 }}
             />
             <MetricCard
               title={t('dashboard.profit')}
               value={formatCurrency(metrics.profit)}
               color={metrics.profit >= 0 ? 'info' : 'error'}
+              sx={{ flex: 1 }}
             />
-            <MetricCard title={t('dashboard.totalOrders')} value={metrics.orderCount} color="warning" />
+            <MetricCard
+              title={t('dashboard.totalOrders')}
+              value={metrics.orderCount}
+              color="warning"
+              sx={{ flex: 1 }}
+            />
           </Stack>
 
           {/* Quick Actions */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
+          <Card sx={{ mb: 3.5 }}>
+            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 800 }}>
                 {t('dashboard.quickActions')}
               </Typography>
-              <Stack direction="row" spacing={2} flexWrap="wrap">
+              <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
                 <Button
                   variant="contained"
                   startIcon={<Restaurant />}
@@ -205,13 +207,13 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Divider sx={{ my: 3 }} />
+          <Divider sx={{ my: 3.5 }} />
 
           {/* Two Column Layout */}
           <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3}>
             {/* Top Dishes */}
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="h6" gutterBottom>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 800 }}>
                 {t('dashboard.topDishes')}
               </Typography>
               {metrics.topDishes?.length > 0 ? (
@@ -221,15 +223,16 @@ export default function DashboardPage() {
                       <Box
                         key={dish.dishId}
                         sx={{
-                          p: 2,
+                          p: { xs: 2, sm: 2.25 },
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
+                          gap: 2,
                           borderBottom: i < metrics.topDishes.length - 1 ? 1 : 0,
                           borderColor: 'divider',
                         }}
                       >
-                        <Box>
+                        <Box sx={{ minWidth: 0 }}>
                           <Typography variant="body2" fontWeight="medium">
                             {dish.dishName}
                           </Typography>
@@ -237,7 +240,7 @@ export default function DashboardPage() {
                             {t('dashboard.sold', { count: dish.quantitySold })}
                           </Typography>
                         </Box>
-                        <Typography variant="body2" color="primary.main" fontWeight="bold">
+                        <Typography variant="body2" color="primary.main" fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
                           {formatCurrency(dish.totalRevenue)}
                         </Typography>
                       </Box>
@@ -257,8 +260,8 @@ export default function DashboardPage() {
             </Box>
 
             {/* Recent Orders */}
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="h6" gutterBottom>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 800 }}>
                 {t('dashboard.recentOrders')}
               </Typography>
               {recentOrders.length > 0 ? (

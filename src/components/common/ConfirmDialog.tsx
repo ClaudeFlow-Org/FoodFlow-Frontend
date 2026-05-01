@@ -29,9 +29,11 @@ export function ConfirmDialog({
     <Dialog open={open} onClose={onCancel} maxWidth="sm" fullWidth>
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
-        <Typography variant="body1">{message}</Typography>
+        <Typography variant="body1" color="text.secondary">
+          {message}
+        </Typography>
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ gap: 1 }}>
         <Button onClick={onCancel} color="inherit">
           {cancelText || t('common.cancel')}
         </Button>

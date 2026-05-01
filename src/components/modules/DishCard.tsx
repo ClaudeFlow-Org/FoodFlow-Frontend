@@ -15,23 +15,24 @@ export function DishCard({ dish, onClick, sx }: DishCardProps) {
   return (
     <Card
       sx={{
+        height: '100%',
         cursor: onClick ? 'pointer' : 'default',
         transition: 'transform 0.2s, box-shadow 0.2s',
         '&:hover': onClick ? {
-          transform: 'translateY(-4px)',
+          transform: 'translateY(-3px)',
           boxShadow: 4,
         } : {},
         ...sx,
       }}
       onClick={onClick}
     >
-      <CardContent>
+      <CardContent sx={{ p: { xs: 2.25, sm: 2.5 } }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
           <Box
             sx={{
               width: 48,
               height: 48,
-              borderRadius: 2,
+              borderRadius: 3,
               bgcolor: 'primary.main',
               display: 'flex',
               alignItems: 'center',
@@ -42,12 +43,12 @@ export function DishCard({ dish, onClick, sx }: DishCardProps) {
             <Restaurant />
           </Box>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="h6" noWrap>
+            <Typography variant="h6" noWrap sx={{ fontWeight: 800 }}>
               {dish.name}
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'right' }}>
-            <Typography variant="h6" color="primary.main">
+            <Typography variant="h6" color="primary.main" sx={{ fontWeight: 850 }}>
               ${dish.price.toFixed(2)}
             </Typography>
           </Box>

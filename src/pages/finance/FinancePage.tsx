@@ -127,22 +127,25 @@ export default function FinancePage() {
         title={t('finance.title')}
         subtitle={t('finance.subtitle')}
         action={
-          <ButtonGroup variant="outlined" size="small">
+          <ButtonGroup variant="outlined" size="small" sx={{ width: { xs: '100%', sm: 'auto' } }}>
             <Button
               onClick={() => setPeriod('DAILY')}
               variant={period === 'DAILY' ? 'contained' : 'outlined'}
+              sx={{ flex: { xs: 1, sm: 'initial' } }}
             >
               {t('finance.daily')}
             </Button>
             <Button
               onClick={() => setPeriod('WEEKLY')}
               variant={period === 'WEEKLY' ? 'contained' : 'outlined'}
+              sx={{ flex: { xs: 1, sm: 'initial' } }}
             >
               {t('finance.weekly')}
             </Button>
             <Button
               onClick={() => setPeriod('MONTHLY')}
               variant={period === 'MONTHLY' ? 'contained' : 'outlined'}
+              sx={{ flex: { xs: 1, sm: 'initial' } }}
             >
               {t('finance.monthly')}
             </Button>
@@ -151,11 +154,12 @@ export default function FinancePage() {
       />
 
       {/* Metrics Cards */}
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3 }}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2.5} sx={{ mb: 3.5 }}>
         <MetricCard
           title={t('finance.totalIncome')}
           value={formatCurrency(report.totalIncome)}
           color="warning"
+          sx={{ flex: 1 }}
           trend={
             report.previousPeriodComparison
               ? { value: report.previousPeriodComparison.incomeChange, label: t('finance.vsPrevious') }
@@ -166,6 +170,7 @@ export default function FinancePage() {
           title={t('finance.totalExpenses')}
           value={formatCurrency(report.totalExpenses)}
           color="error"
+          sx={{ flex: 1 }}
           trend={
             report.previousPeriodComparison
               ? { value: -report.previousPeriodComparison.expenseChange, label: t('finance.vsPrevious') }
@@ -176,6 +181,7 @@ export default function FinancePage() {
           title={t('finance.profit')}
           value={formatCurrency(report.profit)}
           color="info"
+          sx={{ flex: 1 }}
           trend={
             report.previousPeriodComparison
               ? { value: report.previousPeriodComparison.profitChange, label: t('finance.vsPrevious') }
@@ -187,6 +193,7 @@ export default function FinancePage() {
           value={metrics.orderCount}
           subtitle={t('finance.totalOrders')}
           color="warning"
+          sx={{ flex: 1 }}
         />
       </Stack>
 
@@ -194,9 +201,9 @@ export default function FinancePage() {
       <Stack spacing={3}>
         {/* Income vs Expenses Bar Chart */}
         <Card>
-          <CardContent>
+          <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
             <Box sx={{ mb: 2 }}>
-              <Box component="h3" sx={{ fontSize: '1.25rem', fontWeight: 'bold', m: 0 }}>
+              <Box component="h3" sx={{ fontSize: '1.25rem', fontWeight: 800, m: 0 }}>
                 {t('finance.incomeVsExpenses')}
               </Box>
             </Box>
@@ -223,10 +230,10 @@ export default function FinancePage() {
 
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
           {/* Top Dishes Chart */}
-          <Card sx={{ flex: 1 }}>
-            <CardContent>
+          <Card sx={{ flex: 1, minWidth: 0 }}>
+            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
               <Box sx={{ mb: 2 }}>
-                <Box component="h3" sx={{ fontSize: '1.25rem', fontWeight: 'bold', m: 0 }}>
+                <Box component="h3" sx={{ fontSize: '1.25rem', fontWeight: 800, m: 0 }}>
                   {t('finance.topDishesRevenue')}
                 </Box>
               </Box>
@@ -249,10 +256,10 @@ export default function FinancePage() {
           </Card>
 
           {/* Expenses Breakdown Pie Chart */}
-          <Card sx={{ flex: 1 }}>
-            <CardContent>
+          <Card sx={{ flex: 1, minWidth: 0 }}>
+            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
               <Box sx={{ mb: 2 }}>
-                <Box component="h3" sx={{ fontSize: '1.25rem', fontWeight: 'bold', m: 0 }}>
+                <Box component="h3" sx={{ fontSize: '1.25rem', fontWeight: 800, m: 0 }}>
                   {t('finance.expensesBreakdown')}
                 </Box>
               </Box>

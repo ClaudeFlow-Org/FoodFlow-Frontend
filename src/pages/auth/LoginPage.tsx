@@ -18,6 +18,8 @@ import { useAuthStore } from '@/store/authStore';
 import { useI18n } from '@/i18n';
 import { AppControls } from '@/components/common';
 
+const brandLogoSrc = '/foodflow-mark.png';
+
 type LoginFormData = {
   email: string;
   password: string;
@@ -71,28 +73,36 @@ export default function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         bgcolor: 'background.default',
-        px: 2,
+        px: { xs: 2, sm: 3 },
+        py: 6,
         position: 'relative',
       }}
     >
-      <Box sx={{ position: 'absolute', top: 24, right: 24 }}>
+      <Box sx={{ position: 'absolute', top: { xs: 16, sm: 24 }, right: { xs: 16, sm: 24 } }}>
         <AppControls compact />
       </Box>
-      <Container maxWidth="sm">
+      <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center' }}>
         <Paper
           elevation={3}
           sx={{
-            p: 4,
+            width: '100%',
+            maxWidth: 460,
+            p: { xs: 3, sm: 4.5 },
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            borderRadius: 4,
           }}
         >
-          <Typography component="h1" variant="h4" gutterBottom>
+          <Box
+            component="img"
+            src={brandLogoSrc}
+            alt=""
+            sx={{ width: 58, height: 58, objectFit: 'contain', mb: 1.5 }}
+          />
+          <Typography component="h1" variant="h4" gutterBottom sx={{ fontWeight: 850, textAlign: 'center' }}>
             {t('app.name')}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>
             {t('auth.login.subtitle')}
           </Typography>
 
@@ -133,7 +143,7 @@ export default function LoginPage() {
               fullWidth
               variant="contained"
               size="large"
-              sx={{ mt: 3, mb: 2 }}
+              sx={{ mt: 3, mb: 2, minHeight: 48 }}
               disabled={isLoading}
             >
               {isLoading ? <CircularProgress size={24} /> : t('common.signIn')}

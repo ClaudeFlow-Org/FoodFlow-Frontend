@@ -24,7 +24,7 @@ export function SubscriptionPlanCard({ plan, isCurrentPlan = false, onSelect }: 
   return (
     <Paper
       sx={{
-        p: 3,
+        p: { xs: 2.5, sm: 3 },
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -45,9 +45,9 @@ export function SubscriptionPlanCard({ plan, isCurrentPlan = false, onSelect }: 
       <Stack spacing={1} sx={{ mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Star color={plan.type === 'PREMIUM' ? 'primary' : 'disabled'} />
-          <Typography variant="h5">{planName}</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 850 }}>{planName}</Typography>
         </Box>
-        <Typography variant="h4" color="primary.main">
+        <Typography variant="h4" color="primary.main" sx={{ fontWeight: 850 }}>
           {formatCurrency(plan.price)}
           <Typography variant="body2" color="text.secondary">
             /{t('settings.monthly')}

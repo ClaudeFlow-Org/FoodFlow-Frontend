@@ -10,6 +10,7 @@ import {
   TextField,
   Stack,
   Alert,
+  InputAdornment,
 } from '@mui/material';
 import { Add, Edit, Delete, Search } from '@mui/icons-material';
 import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/common';
@@ -185,7 +186,7 @@ export default function DishesPage() {
         }
       />
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2.5 }}>{error}</Alert>}
 
       <Box sx={{ mb: 3 }}>
         <TextField
@@ -193,9 +194,13 @@ export default function DishesPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           InputProps={{
-            startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />,
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search color="action" />
+              </InputAdornment>
+            ),
           }}
-          sx={{ width: 300 }}
+          sx={{ width: { xs: '100%', sm: 360 } }}
         />
       </Box>
 
@@ -261,7 +266,7 @@ export default function DishesPage() {
             />
           </Stack>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ gap: 1 }}>
           <Button onClick={handleCloseModal}>{t('common.cancel')}</Button>
           <Button onClick={() => void handleSubmit()} variant="contained">
             {editDish ? t('common.update') : t('common.create')}

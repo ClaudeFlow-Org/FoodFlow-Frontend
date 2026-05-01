@@ -44,14 +44,21 @@ export function DataTable<T>({ columns, rows, rowId, emptyMessage, sx }: DataTab
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
 
   return (
-    <TableContainer component={Paper} sx={sx}>
-      <Table>
+    <TableContainer
+      component={Paper}
+      sx={{
+        width: '100%',
+        overflowX: 'auto',
+        ...sx,
+      }}
+    >
+      <Table sx={{ minWidth: 720 }}>
         <TableHead>
           <TableRow>
             {columns.map((column) => (
               <TableCell
                 key={column.id}
-                sx={{ width: column.width, fontWeight: 'bold' }}
+                sx={{ width: column.width, whiteSpace: 'nowrap' }}
               >
                 {column.label}
               </TableCell>
@@ -61,7 +68,7 @@ export function DataTable<T>({ columns, rows, rowId, emptyMessage, sx }: DataTab
         <TableBody>
           {rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={columns.length} align="center" sx={{ py: 4 }}>
+              <TableCell colSpan={columns.length} align="center" sx={{ py: 6, color: 'text.secondary' }}>
                 {emptyMessage || t('common.noData')}
               </TableCell>
             </TableRow>
@@ -72,7 +79,9 @@ export function DataTable<T>({ columns, rows, rowId, emptyMessage, sx }: DataTab
             ).map((row) => (
               <TableRow key={rowId(row)} hover>
                 {columns.map((column) => (
-                  <TableCell key={column.id}>{column.render(row)}</TableCell>
+                  <TableCell key={column.id} sx={{ verticalAlign: 'middle' }}>
+                    {column.render(row)}
+                  </TableCell>
                 ))}
               </TableRow>
             ))
@@ -100,6 +109,7 @@ export function DataTable<T>({ columns, rows, rowId, emptyMessage, sx }: DataTab
         }
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
+        sx={{ borderTop: 1, borderColor: 'divider' }}
       />
     </TableContainer>
   );
