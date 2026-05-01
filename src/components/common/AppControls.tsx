@@ -7,9 +7,9 @@ interface AppControlsProps {
   compact?: boolean;
 }
 
-const languageOptions: Record<Language, { flag: string; shortKey: string; labelKey: string }> = {
-  es: { flag: '🇪🇸', shortKey: 'language.esShort', labelKey: 'language.es' },
-  en: { flag: '🇬🇧', shortKey: 'language.enShort', labelKey: 'language.en' },
+const languageOptions: Record<Language, { shortKey: string; labelKey: string }> = {
+  es: { shortKey: 'language.esShort', labelKey: 'language.es' },
+  en: { shortKey: 'language.enShort', labelKey: 'language.en' },
 };
 
 export function AppControls({ compact = false }: AppControlsProps) {
@@ -35,13 +35,6 @@ export function AppControls({ compact = false }: AppControlsProps) {
             onClick={() => setLanguage(item)}
             aria-label={t(languageOptions[item].labelKey)}
           >
-            <Box
-              component="span"
-              aria-hidden="true"
-              sx={{ display: 'inline-flex', fontSize: compact ? 15 : 16, lineHeight: 1 }}
-            >
-              {languageOptions[item].flag}
-            </Box>
             <Box component="span">{t(languageOptions[item].shortKey)}</Box>
           </Button>
         ))}
