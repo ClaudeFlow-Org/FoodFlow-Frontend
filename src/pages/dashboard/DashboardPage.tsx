@@ -8,22 +8,54 @@ import {
   Alert,
   Skeleton,
   Button,
+  ButtonGroup,
   Divider,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { AttachMoney, ShoppingCart, Restaurant } from '@mui/icons-material';
 import { MetricCard, DataTable, EmptyState, PageHeader } from '@/components/common';
 import { financeService, orderService } from '@/services';
-import type { DashboardMetrics, Column, Order } from '@/types';
+import type { DashboardMetrics, Column, Order, ReportPeriod } from '@/types';
 import { useI18n } from '@/i18n';
 
-const buildMetricsFromOrders = (orders: Order[]): DashboardMetrics => {
+const getPeriodWindow = (period: ReportPeriod) => {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+
+  if (period === 'WEEKLY') {
+    const mondayOffset = (start.getDay() + 6) % 7;
+    start.setDate(start.getDate() - mondayOffset);
+  }
+
+  if (period === 'MONTHLY') {
+    start.setDate(1);
+  }
+
+  const end = new Date(start);
+  if (period === 'DAILY') end.setDate(end.getDate() + 1);
+  if (period === 'WEEKLY') end.setDate(end.getDate() + 7);
+  if (period === 'MONTHLY') end.setMonth(end.getMonth() + 1);
+
+  return { start, end };
+};
+
+const filterOrdersByPeriod = (orders: Order[], period: ReportPeriod) => {
+  const { start, end } = getPeriodWindow(period);
+  return orders.filter((order) => {
+    const orderDate = new Date(order.createdAt);
+    return orderDate >= start && orderDate < end;
+  });
+};
+
+const buildMetricsFromOrders = (orders: Order[], period: ReportPeriod): DashboardMetrics => {
+  const periodOrders = filterOrdersByPeriod(orders, period);
+  const deliveredOrders = periodOrders.filter((order) => order.status === 'ENTREGADA');
   const dishTotals = new Map<
     number,
     { dishId: number; dishName: string; totalRevenue: number; quantitySold: number }
   >();
 
-  orders.forEach((order) => {
+  deliveredOrders.forEach((order) => {
     order.lineItems.forEach((item) => {
       const current = dishTotals.get(item.dishId) || {
         dishId: item.dishId,
@@ -37,23 +69,24 @@ const buildMetricsFromOrders = (orders: Order[]): DashboardMetrics => {
     });
   });
 
-  const totalIncome = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+  const totalIncome = deliveredOrders.reduce((sum, order) => sum + order.totalAmount, 0);
 
   return {
     totalIncome,
     totalExpenses: 0,
     profit: totalIncome,
-    period: 'CURRENT',
+    period,
     topDishes: Array.from(dishTotals.values()).sort(
       (a, b) => b.totalRevenue - a.totalRevenue
     ),
-    orderCount: orders.length,
+    orderCount: periodOrders.length,
   };
 };
 
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { t } = useI18n();
+  const [period, setPeriod] = useState<ReportPeriod>('DAILY');
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,32 +94,31 @@ export default function DashboardPage() {
 
   useEffect(() => {
     void loadData();
-  }, []);
+  }, [period]);
 
   const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
       const [metricsResult, ordersResult] = await Promise.allSettled([
-        financeService.getDashboardMetrics(),
+        financeService.getDashboardMetrics(period),
         orderService.getAll(),
       ]);
 
       const ordersData = ordersResult.status === 'fulfilled' ? ordersResult.value : [];
-      setRecentOrders(ordersData.slice(0, 5));
+      setRecentOrders(filterOrdersByPeriod(ordersData, period).slice(0, 5));
 
       if (metricsResult.status === 'fulfilled') {
-        const fallbackMetrics = buildMetricsFromOrders(ordersData);
+        const fallbackMetrics = buildMetricsFromOrders(ordersData, period);
         setMetrics({
           ...metricsResult.value,
-          orderCount: ordersData.length,
           topDishes:
             metricsResult.value.topDishes.length > 0
               ? metricsResult.value.topDishes
               : fallbackMetrics.topDishes,
         });
       } else if (ordersResult.status === 'fulfilled') {
-        setMetrics(buildMetricsFromOrders(ordersData));
+        setMetrics(buildMetricsFromOrders(ordersData, period));
       } else {
         throw ordersResult.reason;
       }
@@ -128,7 +160,35 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <Box>
-        <PageHeader title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
+        <PageHeader
+          title={t('dashboard.title')}
+          subtitle={t('dashboard.subtitle')}
+          action={
+            <ButtonGroup variant="outlined" size="small" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+              <Button
+                onClick={() => setPeriod('DAILY')}
+                variant={period === 'DAILY' ? 'contained' : 'outlined'}
+                sx={{ flex: { xs: 1, sm: 'initial' } }}
+              >
+                {t('finance.daily')}
+              </Button>
+              <Button
+                onClick={() => setPeriod('WEEKLY')}
+                variant={period === 'WEEKLY' ? 'contained' : 'outlined'}
+                sx={{ flex: { xs: 1, sm: 'initial' } }}
+              >
+                {t('finance.weekly')}
+              </Button>
+              <Button
+                onClick={() => setPeriod('MONTHLY')}
+                variant={period === 'MONTHLY' ? 'contained' : 'outlined'}
+                sx={{ flex: { xs: 1, sm: 'initial' } }}
+              >
+                {t('finance.monthly')}
+              </Button>
+            </ButtonGroup>
+          }
+        />
         <Stack spacing={2.5}>
           <Skeleton variant="rounded" height={152} />
           <Skeleton variant="rounded" height={220} />
@@ -143,7 +203,35 @@ export default function DashboardPage() {
 
   return (
     <Box>
-      <PageHeader title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
+      <PageHeader
+        title={t('dashboard.title')}
+        subtitle={t('dashboard.subtitle')}
+        action={
+          <ButtonGroup variant="outlined" size="small" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+            <Button
+              onClick={() => setPeriod('DAILY')}
+              variant={period === 'DAILY' ? 'contained' : 'outlined'}
+              sx={{ flex: { xs: 1, sm: 'initial' } }}
+            >
+              {t('finance.daily')}
+            </Button>
+            <Button
+              onClick={() => setPeriod('WEEKLY')}
+              variant={period === 'WEEKLY' ? 'contained' : 'outlined'}
+              sx={{ flex: { xs: 1, sm: 'initial' } }}
+            >
+              {t('finance.weekly')}
+            </Button>
+            <Button
+              onClick={() => setPeriod('MONTHLY')}
+              variant={period === 'MONTHLY' ? 'contained' : 'outlined'}
+              sx={{ flex: { xs: 1, sm: 'initial' } }}
+            >
+              {t('finance.monthly')}
+            </Button>
+          </ButtonGroup>
+        }
+      />
 
       {metrics && (
         <>

@@ -18,15 +18,7 @@ import {
   Paper,
   Typography,
 } from '@mui/material';
-<<<<<<< HEAD
-<<<<<<< HEAD
-import { Add, Delete, Remove, AddCircle, ArrowForward, Cancel } from '@mui/icons-material';
-=======
-import { Add, Delete, Remove, AddCircle } from '@mui/icons-material';
->>>>>>> parent of 6767818 (fix(app): improve dashboard orders and inventory finance flows)
-=======
-import { Add, Delete, Remove, AddCircle } from '@mui/icons-material';
->>>>>>> parent of 6767818 (fix(app): improve dashboard orders and inventory finance flows)
+import { Add, Delete, Remove, AddCircle, CheckCircle, Cancel } from '@mui/icons-material';
 import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/common';
 import { orderService, dishService } from '@/services';
 import type { Order, Dish, CreateLineItemRequest, OrderType, OrderStatus, Column } from '@/types';
@@ -36,11 +28,9 @@ import { useI18n } from '@/i18n';
 const orderTypes: OrderType[] = ['DINE_IN', 'TAKEAWAY', 'DELIVERY'];
 
 const statusColors: Record<OrderStatus, 'success' | 'info' | 'warning' | 'error' | 'default'> = {
-  PENDING: 'default',
-  PREPARING: 'info',
-  READY: 'warning',
-  DELIVERED: 'success',
-  CANCELLED: 'error',
+  PENDIENTE: 'default',
+  ENTREGADA: 'success',
+  CANCELADA: 'error',
 };
 
 interface LineItemForm extends CreateLineItemRequest {
@@ -176,8 +166,6 @@ export default function OrdersPage() {
     }
   };
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   const handleAdvanceStatus = async (order: Order) => {
     try {
       await orderService.advanceStatus(order.id);
@@ -196,23 +184,6 @@ export default function OrdersPage() {
     }
   };
 
-  const getNextStatusLabel = (status: OrderStatus): string => {
-    switch (status) {
-      case 'PENDING':
-        return t('orders.status.PREPARING');
-      case 'PREPARING':
-        return t('orders.status.READY');
-      case 'READY':
-        return t('orders.status.DELIVERED');
-      default:
-        return '';
-    }
-  };
-
-=======
->>>>>>> parent of 6767818 (fix(app): improve dashboard orders and inventory finance flows)
-=======
->>>>>>> parent of 6767818 (fix(app): improve dashboard orders and inventory finance flows)
   const columns: Column<Order>[] = [
     {
       id: 'orderNumber',
@@ -262,32 +233,27 @@ export default function OrdersPage() {
       id: 'actions',
       label: t('common.actions'),
       render: (row: Order) => (
-<<<<<<< HEAD
-<<<<<<< HEAD
         <Stack direction="row" spacing={0.5}>
-          {/* Advance status button - show for PENDING, PREPARING, READY */}
-          {row.status !== 'DELIVERED' && row.status !== 'CANCELLED' && (
+          {row.status === 'PENDIENTE' && (
             <IconButton
               size="small"
               color="primary"
               onClick={() => void handleAdvanceStatus(row)}
-              title={getNextStatusLabel(row.status)}
+              title={t('orders.markDelivered')}
             >
-              <ArrowForward fontSize="small" />
+              <CheckCircle fontSize="small" />
             </IconButton>
           )}
-          {/* Cancel button - show for non-final states */}
-          {row.status !== 'DELIVERED' && row.status !== 'CANCELLED' && (
+          {row.status === 'PENDIENTE' && (
             <IconButton
               size="small"
               color="warning"
               onClick={() => void handleCancelStatus(row)}
-              title={t('orders.status.CANCELLED')}
+              title={t('orders.status.CANCELADA')}
             >
               <Cancel fontSize="small" />
             </IconButton>
           )}
-          {/* Delete button - always show */}
           <IconButton
             size="small"
             color="error"
@@ -296,20 +262,6 @@ export default function OrdersPage() {
             <Delete fontSize="small" />
           </IconButton>
         </Stack>
-=======
-=======
->>>>>>> parent of 6767818 (fix(app): improve dashboard orders and inventory finance flows)
-        <IconButton
-          size="small"
-          color="error"
-          onClick={() => setDeleteConfirm({ open: true, order: row })}
-        >
-          <Delete fontSize="small" />
-        </IconButton>
-<<<<<<< HEAD
->>>>>>> parent of 6767818 (fix(app): improve dashboard orders and inventory finance flows)
-=======
->>>>>>> parent of 6767818 (fix(app): improve dashboard orders and inventory finance flows)
       ),
     },
   ];

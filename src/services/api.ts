@@ -36,15 +36,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error instanceof Error ? error : new Error('Request setup failed'))
 );
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 // Response interceptor - handle errors with retry logic and better messages
-=======
-// Response interceptor - handle 401
->>>>>>> parent of 6767818 (fix(app): improve dashboard orders and inventory finance flows)
-=======
-// Response interceptor - handle 401
->>>>>>> parent of 6767818 (fix(app): improve dashboard orders and inventory finance flows)
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ApiErrorBody>) => {

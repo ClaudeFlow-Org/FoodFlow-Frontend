@@ -12,26 +12,39 @@ import {
   Stack,
   Alert,
   InputAdornment,
+  Autocomplete,
+  List,
+  ListItem,
+  ListItemText,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, Warning } from '@mui/icons-material';
+import { Add, Edit, Delete, Search, Warning, Category as CategoryIcon } from '@mui/icons-material';
 import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/common';
 import { productService } from '@/services';
-import type { Product, Column } from '@/types';
+import type { Product, ProductCategory, Column } from '@/types';
 import { Inventory2Outlined } from '@mui/icons-material';
 import { useI18n } from '@/i18n';
 
 export default function ProductsPage() {
   const { t } = useI18n();
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [openModal, setOpenModal] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [categoryForm, setCategoryForm] = useState('');
+  const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; product: Product | null }>({
     open: false,
     product: null,
   });
+  const [deleteCategoryConfirm, setDeleteCategoryConfirm] = useState<{ open: boolean; category: ProductCategory | null }>({
+    open: false,
+    category: null,
+  });
   const [error, setError] = useState<string | null>(null);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -48,15 +61,23 @@ export default function ProductsPage() {
     void loadProducts();
   }, []);
 
-  const loadProducts = async () => {
+  const loadProducts = async (showLoader = true) => {
     try {
-      setLoading(true);
-      const data = await productService.getAll();
-      setProducts(data);
+      if (showLoader) {
+        setLoading(true);
+      }
+      const [productsData, categoriesData] = await Promise.all([
+        productService.getAll(),
+        productService.getCategories(),
+      ]);
+      setProducts(productsData);
+      setCategories(categoriesData);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('products.loadError'));
     } finally {
-      setLoading(false);
+      if (showLoader) {
+        setLoading(false);
+      }
     }
   };
 
@@ -95,6 +116,50 @@ export default function ProductsPage() {
     setEditProduct(null);
   };
 
+  const resetCategoryForm = () => {
+    setCategoryForm('');
+    setEditingCategory(null);
+  };
+
+  const handleOpenCategoryDialog = () => {
+    setCategoryError(null);
+    resetCategoryForm();
+    setCategoryDialogOpen(true);
+  };
+
+  const handleCloseCategoryDialog = () => {
+    setCategoryDialogOpen(false);
+    setCategoryError(null);
+    resetCategoryForm();
+  };
+
+  const handleSaveCategory = async () => {
+    const name = categoryForm.trim();
+    if (!name) {
+      setCategoryError(t('products.categoryNameRequired'));
+      return;
+    }
+
+    try {
+      setCategoryError(null);
+      if (editingCategory) {
+        await productService.updateCategory(editingCategory.id, name);
+      } else {
+        await productService.createCategory(name);
+      }
+      resetCategoryForm();
+      void loadProducts(false);
+    } catch (err) {
+      setCategoryError(err instanceof Error ? err.message : t('products.categorySaveError'));
+    }
+  };
+
+  const handleEditCategory = (category: ProductCategory) => {
+    setEditingCategory(category);
+    setCategoryForm(category.name);
+    setCategoryError(null);
+  };
+
   const handleSubmit = async () => {
     try {
       const payload = {
@@ -129,6 +194,22 @@ export default function ProductsPage() {
         void loadProducts();
       } catch (err) {
         setError(err instanceof Error ? err.message : t('products.deleteError'));
+      }
+    }
+  };
+
+  const handleDeleteCategory = async () => {
+    if (deleteCategoryConfirm.category) {
+      try {
+        await productService.deleteCategory(deleteCategoryConfirm.category.id);
+        if (formData.category === deleteCategoryConfirm.category.name) {
+          setFormData({ ...formData, category: '' });
+        }
+        setDeleteCategoryConfirm({ open: false, category: null });
+        resetCategoryForm();
+        void loadProducts(false);
+      } catch (err) {
+        setCategoryError(err instanceof Error ? err.message : t('products.categoryDeleteError'));
       }
     }
   };
@@ -205,6 +286,7 @@ export default function ProductsPage() {
   ];
 
   const lowStockCount = products.filter((p) => isLowStock(p)).length;
+  const categoryOptions = categories.map((category) => category.name);
 
   if (loading) {
     return <Box>{t('common.loading')}</Box>;
@@ -216,13 +298,24 @@ export default function ProductsPage() {
         title={t('products.title')}
         subtitle={t('products.subtitle')}
         action={
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => handleOpenModal()}
-          >
-            {t('products.add')}
-          </Button>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+            <Button
+              variant="outlined"
+              startIcon={<CategoryIcon />}
+              onClick={handleOpenCategoryDialog}
+              sx={{ whiteSpace: 'nowrap' }}
+            >
+              {t('products.manageCategories')}
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => handleOpenModal()}
+              sx={{ whiteSpace: 'nowrap' }}
+            >
+              {t('products.add')}
+            </Button>
+          </Stack>
         }
       />
 
@@ -329,12 +422,19 @@ export default function ProductsPage() {
               onChange={(e) => setFormData({ ...formData, lowStockThreshold: e.target.value })}
               helperText={t('products.lowStockHelp')}
             />
-            <TextField
-              label={t('products.category')}
-              fullWidth
+            <Autocomplete
+              freeSolo
+              options={categoryOptions}
               value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              placeholder={t('products.categoryPlaceholder')}
+              onChange={(_event, value) => setFormData({ ...formData, category: value || '' })}
+              onInputChange={(_event, value) => setFormData({ ...formData, category: value })}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label={t('products.category')}
+                  placeholder={t('products.categoryPlaceholder')}
+                />
+              )}
             />
             <TextField
               label={t('products.supplier')}
@@ -352,6 +452,70 @@ export default function ProductsPage() {
         </DialogActions>
       </Dialog>
 
+      <Dialog open={categoryDialogOpen} onClose={handleCloseCategoryDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>{t('products.manageCategories')}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2.25} sx={{ mt: 1 }}>
+            {categoryError && <Alert severity="error">{categoryError}</Alert>}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              <TextField
+                label={editingCategory ? t('products.renameCategory') : t('products.newCategory')}
+                fullWidth
+                value={categoryForm}
+                onChange={(e) => setCategoryForm(e.target.value)}
+                placeholder={t('products.categoryPlaceholder')}
+              />
+              <Button variant="contained" onClick={() => void handleSaveCategory()} sx={{ whiteSpace: 'nowrap' }}>
+                {editingCategory ? t('common.update') : t('common.create')}
+              </Button>
+              {editingCategory && (
+                <Button variant="text" onClick={resetCategoryForm} sx={{ whiteSpace: 'nowrap' }}>
+                  {t('common.cancel')}
+                </Button>
+              )}
+            </Stack>
+
+            {categories.length > 0 ? (
+              <List disablePadding>
+                {categories.map((category) => (
+                  <ListItem
+                    key={category.id}
+                    disableGutters
+                    secondaryAction={
+                      <Stack direction="row" spacing={0.5}>
+                        <IconButton size="small" onClick={() => handleEditCategory(category)}>
+                          <Edit fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => setDeleteCategoryConfirm({ open: true, category })}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Stack>
+                    }
+                    sx={{ pr: 9 }}
+                  >
+                    <ListItemText
+                      primary={category.name}
+                      secondary={t('products.categoryUsage', {
+                        count: products.filter((product) => product.category === category.name).length,
+                      })}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Alert severity="info">{t('products.noCategories')}</Alert>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ gap: 1 }}>
+          <Button onClick={handleCloseCategoryDialog}>{t('common.close')}</Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Delete Confirmation */}
       <ConfirmDialog
         open={deleteConfirm.open}
@@ -359,6 +523,14 @@ export default function ProductsPage() {
         message={t('products.deleteMessage', { name: deleteConfirm.product?.name || '' })}
         onConfirm={() => void handleDelete()}
         onCancel={() => setDeleteConfirm({ open: false, product: null })}
+      />
+
+      <ConfirmDialog
+        open={deleteCategoryConfirm.open}
+        title={t('products.deleteCategoryTitle')}
+        message={t('products.deleteCategoryMessage', { name: deleteCategoryConfirm.category?.name || '' })}
+        onConfirm={() => void handleDeleteCategory()}
+        onCancel={() => setDeleteCategoryConfirm({ open: false, category: null })}
       />
     </Box>
   );

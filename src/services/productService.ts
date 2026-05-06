@@ -2,6 +2,7 @@ import api from './api';
 import type {
   ApiResponse,
   Product,
+  ProductCategory,
   CreateProductRequest,
   UpdateProductRequest,
 } from '@/types';
@@ -9,43 +10,39 @@ import type {
 interface BackendProduct {
   id: number;
   name: string;
+  description?: string;
+  category?: string;
+  supplier?: string;
+  lowStockThreshold?: number;
   stockLevel: number;
   unitOfMeasure: string;
   unitCost: number;
   createdAt: string;
 }
 
-interface ProductCategory {
-  value: string;
-  label: string;
-  labelEs: string;
-  labelEn: string;
-}
-
 const mapProduct = (product: BackendProduct): Product => ({
   id: product.id,
   name: product.name,
+  description: product.description,
+  category: product.category,
+  supplier: product.supplier,
   stockLevel: product.stockLevel,
   unitOfMeasure: product.unitOfMeasure,
   unitCost: product.unitCost,
-<<<<<<< HEAD
-<<<<<<< HEAD
   lowStockThreshold: product.lowStockThreshold ?? 10,
-=======
-  lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD,
->>>>>>> parent of 6767818 (fix(app): improve dashboard orders and inventory finance flows)
-=======
-  lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD,
->>>>>>> parent of 6767818 (fix(app): improve dashboard orders and inventory finance flows)
   createdAt: product.createdAt,
   updatedAt: product.createdAt,
 });
 
 const toProductRequest = (data: CreateProductRequest | UpdateProductRequest) => ({
   name: data.name,
+  description: data.description,
+  category: data.category,
+  supplier: data.supplier,
   stockLevel: data.stockLevel,
   unitOfMeasure: data.unitOfMeasure,
   unitCost: data.unitCost,
+  lowStockThreshold: data.lowStockThreshold,
 });
 
 class ProductService {
@@ -80,17 +77,25 @@ class ProductService {
   async delete(id: number): Promise<void> {
     await api.delete(`${this.basePath}/${id}`);
   }
-<<<<<<< HEAD
-<<<<<<< HEAD
 
   async getCategories(): Promise<ProductCategory[]> {
     const response = await api.get<ApiResponse<ProductCategory[]>>(`${this.basePath}/categories`);
     return response.data.data;
   }
-=======
->>>>>>> parent of 6767818 (fix(app): improve dashboard orders and inventory finance flows)
-=======
->>>>>>> parent of 6767818 (fix(app): improve dashboard orders and inventory finance flows)
+
+  async createCategory(name: string): Promise<ProductCategory> {
+    const response = await api.post<ApiResponse<ProductCategory>>(`${this.basePath}/categories`, { name });
+    return response.data.data;
+  }
+
+  async updateCategory(id: number, name: string): Promise<ProductCategory> {
+    const response = await api.put<ApiResponse<ProductCategory>>(`${this.basePath}/categories/${id}`, { name });
+    return response.data.data;
+  }
+
+  async deleteCategory(id: number): Promise<void> {
+    await api.delete(`${this.basePath}/categories/${id}`);
+  }
 }
 
 export const productService = new ProductService();

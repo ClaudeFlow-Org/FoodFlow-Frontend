@@ -11,11 +11,9 @@ interface OrderCardProps {
 }
 
 const statusColors: Record<Order['status'], 'default' | 'info' | 'warning' | 'success' | 'error'> = {
-  PENDING: 'default',
-  PREPARING: 'info',
-  READY: 'warning',
-  DELIVERED: 'success',
-  CANCELLED: 'error',
+  PENDIENTE: 'default',
+  ENTREGADA: 'success',
+  CANCELADA: 'error',
 };
 
 export function OrderCard({ order, onClick, sx }: OrderCardProps) {

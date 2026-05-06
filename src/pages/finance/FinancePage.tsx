@@ -55,7 +55,7 @@ export default function FinancePage() {
       setLoading(true);
       setError(null);
       const [metricsData, reportData] = await Promise.all([
-        financeService.getDashboardMetrics(),
+        financeService.getDashboardMetrics(period),
         financeService.getReport(period),
       ]);
       setMetrics(metricsData);
@@ -72,8 +72,6 @@ export default function FinancePage() {
     return `$${value.toFixed(2)}`;
   };
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -86,25 +84,7 @@ export default function FinancePage() {
     profit: cat.amount - (report.expensesByCategory?.[i]?.amount || 0),
   }));
 
-=======
-  const chartData: ChartData[] | undefined = report?.incomeByCategory?.map((cat, i) => ({
-    name: cat.category === 'Income' ? t('finance.income') : cat.category,
-    income: cat.amount,
-    expenses: report.expensesByCategory?.[i]?.amount || 0,
-    profit: cat.amount - (report.expensesByCategory?.[i]?.amount || 0),
-  }));
-
->>>>>>> parent of 6767818 (fix(app): improve dashboard orders and inventory finance flows)
-=======
-  const chartData: ChartData[] | undefined = report?.incomeByCategory?.map((cat, i) => ({
-    name: cat.category === 'Income' ? t('finance.income') : cat.category,
-    income: cat.amount,
-    expenses: report.expensesByCategory?.[i]?.amount || 0,
-    profit: cat.amount - (report.expensesByCategory?.[i]?.amount || 0),
-  }));
-
->>>>>>> parent of 6767818 (fix(app): improve dashboard orders and inventory finance flows)
-  const topDishesData = metrics?.topDishes?.map((d) => ({
+  const topDishesData = (metrics?.topDishes?.length ? metrics.topDishes : report?.topDishes)?.map((d) => ({
     name: d.dishName,
     revenue: d.totalRevenue,
     quantity: d.quantitySold,
