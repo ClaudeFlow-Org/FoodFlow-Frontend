@@ -10,6 +10,7 @@ import {
   Skeleton,
   Chip,
   Typography,
+  LinearProgress,
 } from '@mui/material';
 import {
   BarChart,
@@ -29,7 +30,7 @@ import { financeService } from '@/services';
 import type { DashboardMetrics, FinancialReport, ReportPeriod } from '@/types';
 import { useI18n } from '@/i18n';
 
-const COLORS = ['#f2811d', '#c45c3e', '#2d2620', '#ff833a', '#8f4a32', '#6b5f52'];
+const COLORS = ['#2563eb', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#64748b'];
 
 interface ChartData {
   name: string;
@@ -77,12 +78,16 @@ export default function FinancePage() {
     return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  const chartData: ChartData[] | undefined = report?.incomeByCategory?.map((cat, i) => ({
-    name: cat.category === 'Income' ? t('finance.income') : cat.category,
-    income: cat.amount,
-    expenses: report.expensesByCategory?.[i]?.amount || 0,
-    profit: cat.amount - (report.expensesByCategory?.[i]?.amount || 0),
-  }));
+  const chartData: ChartData[] | undefined = report
+    ? [
+        {
+          name: t('finance.periodSummary'),
+          income: report.totalIncome,
+          expenses: report.totalExpenses,
+          profit: report.profit,
+        },
+      ]
+    : undefined;
 
   const topDishesData = (metrics?.topDishes?.length ? metrics.topDishes : report?.topDishes)?.map((d) => ({
     name: d.dishName,
@@ -90,10 +95,14 @@ export default function FinancePage() {
     quantity: d.quantitySold,
   }));
 
-  const expensePieData = report?.expensesByCategory?.map((cat) => ({
-    name: cat.category,
-    value: cat.amount,
-  }));
+  const expensePieData = report?.expensesByCategory
+    ?.filter((cat) => cat.amount > 0)
+    .map((cat) => ({
+      name: cat.category || t('common.unknown'),
+      value: cat.amount,
+    }));
+
+  const expenseTotal = expensePieData?.reduce((total, item) => total + item.value, 0) || 0;
 
   if (loading) {
     return (
@@ -205,7 +214,7 @@ export default function FinancePage() {
         />
         <MetricCard
           title={t('finance.orders')}
-          value={metrics.orderCount}
+          value={report.orderCount}
           subtitle={t('finance.totalOrders')}
           color="warning"
           sx={{ flex: 1 }}
@@ -230,9 +239,9 @@ export default function FinancePage() {
                   <YAxis tickFormatter={formatCurrency} />
                   <Tooltip formatter={(value) => (typeof value === 'number' ? formatCurrency(value) : value)} />
                   <Legend />
-                  <Bar dataKey="income" fill="#f2811d" name={t('finance.income')} />
-                  <Bar dataKey="expenses" fill="#c45c3e" name={t('finance.expenses')} />
-                  <Bar dataKey="profit" fill="#2d2620" name={t('finance.profit')} />
+                  <Bar dataKey="income" fill="#2563eb" name={t('finance.income')} radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="expenses" fill="#ef4444" name={t('finance.expenses')} radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="profit" fill="#16a34a" name={t('finance.profit')} radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -259,7 +268,7 @@ export default function FinancePage() {
                     <XAxis type="number" tickFormatter={formatCurrency} />
                     <YAxis dataKey="name" type="category" width={100} />
                     <Tooltip formatter={(value) => (typeof value === 'number' ? formatCurrency(value) : value)} />
-                    <Bar dataKey="revenue" fill="#f2811d" />
+                    <Bar dataKey="revenue" fill="#2563eb" radius={[0, 6, 6, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -279,28 +288,77 @@ export default function FinancePage() {
                 </Box>
               </Box>
               {expensePieData && expensePieData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={expensePieData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${percent ? (percent * 100).toFixed(0) : 0}%`}
-                      outerRadius={80}
-                      fill="#f2811d"
-                      dataKey="value"
-                    >
-                      {expensePieData.map((_entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => (typeof value === 'number' ? formatCurrency(value) : value)} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+                  <Box sx={{ width: { xs: '100%', sm: '52%' }, minWidth: 0 }}>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={expensePieData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={88}
+                          innerRadius={42}
+                          fill="#2563eb"
+                          dataKey="value"
+                        >
+                          {expensePieData.map((_entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => (typeof value === 'number' ? formatCurrency(value) : value)} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Box>
+                  <Stack spacing={1.25} sx={{ width: { xs: '100%', sm: '48%' }, minWidth: 0 }}>
+                    {expensePieData.map((item, index) => {
+                      const percentage = expenseTotal > 0 ? (item.value / expenseTotal) * 100 : 0;
+                      return (
+                        <Box key={item.name}>
+                          <Stack direction="row" justifyContent="space-between" spacing={1} sx={{ mb: 0.5 }}>
+                            <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                              <Box
+                                sx={{
+                                  width: 10,
+                                  height: 10,
+                                  borderRadius: '50%',
+                                  bgcolor: COLORS[index % COLORS.length],
+                                  flexShrink: 0,
+                                }}
+                              />
+                              <Typography variant="body2" noWrap>
+                                {item.name}
+                              </Typography>
+                            </Stack>
+                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                              {formatCurrency(item.value)}
+                            </Typography>
+                          </Stack>
+                          <LinearProgress
+                            variant="determinate"
+                            value={percentage}
+                            sx={{
+                              height: 7,
+                              borderRadius: 1,
+                              bgcolor: 'action.hover',
+                              '& .MuiLinearProgress-bar': {
+                                bgcolor: COLORS[index % COLORS.length],
+                              },
+                            }}
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            {percentage.toFixed(0)}%
+                          </Typography>
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                </Stack>
               ) : (
-                <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {t('finance.noExpenseData')}
+                <Box sx={{ minHeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Alert severity="info" sx={{ maxWidth: 460 }}>
+                    {t('finance.noExpenseDataHint')}
+                  </Alert>
                 </Box>
               )}
             </CardContent>

@@ -16,6 +16,9 @@ import {
   List,
   ListItem,
   ListItemText,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
 } from '@mui/material';
 import { Add, Edit, Delete, Search, Warning, Category as CategoryIcon } from '@mui/icons-material';
 import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/common';
@@ -233,9 +236,13 @@ export default function ProductsPage() {
             {row.name}
             {isLowStock(row) && <Warning fontSize="small" color="warning" />}
           </Box>
-          {row.category && (
-            <Chip label={row.category} size="small" sx={{ mt: 0.5 }} />
-          )}
+          <Chip
+            label={row.category || t('products.noCategory')}
+            size="small"
+            variant={row.category ? 'filled' : 'outlined'}
+            color={row.category ? 'default' : 'warning'}
+            sx={{ mt: 0.5 }}
+          />
         </Box>
       ),
     },
@@ -436,6 +443,64 @@ export default function ProductsPage() {
                 />
               )}
             />
+            <Box
+              sx={{
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                p: 1.5,
+                bgcolor: 'action.hover',
+              }}
+            >
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mb: 1 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>
+                  {t('products.quickCategories')}
+                </Typography>
+                <Button size="small" startIcon={<CategoryIcon />} onClick={handleOpenCategoryDialog}>
+                  {t('products.manageCategories')}
+                </Button>
+              </Stack>
+              <ToggleButtonGroup
+                exclusive
+                value={formData.category || ''}
+                onChange={(_event, value) => setFormData({ ...formData, category: value || '' })}
+                sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 1,
+                  '& .MuiToggleButtonGroup-grouped': {
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    px: 1.5,
+                    py: 0.75,
+                    m: 0,
+                    '&.Mui-selected': {
+                      borderColor: 'primary.main',
+                      bgcolor: 'primary.main',
+                      color: 'primary.contrastText',
+                      '&:hover': {
+                        bgcolor: 'primary.dark',
+                      },
+                    },
+                  },
+                }}
+              >
+                <ToggleButton value="" size="small">
+                  {t('products.noCategory')}
+                </ToggleButton>
+                {categoryOptions.map((category) => (
+                  <ToggleButton key={category} value={category} size="small">
+                    {category}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+              {categoryOptions.length === 0 && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  {t('products.noCategories')}
+                </Typography>
+              )}
+            </Box>
             <TextField
               label={t('products.supplier')}
               fullWidth
