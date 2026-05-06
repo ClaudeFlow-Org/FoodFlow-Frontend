@@ -11,7 +11,7 @@ interface OrderCardProps {
 }
 
 const statusColors: Record<Order['status'], 'default' | 'info' | 'warning' | 'success' | 'error'> = {
-  PENDIENTE: 'warning',
+  PENDIENTE: 'default',
   ENTREGADA: 'success',
   CANCELADA: 'error',
 };

@@ -109,7 +109,7 @@ export interface ProductCategory {
   name: string;
   value: string;
   label: string;
-  createdAt?: string;
+  createdAt: string;
 }
 
 export interface CreateProductRequest {
@@ -180,9 +180,7 @@ export interface DashboardMetrics {
   totalIncome: number;
   totalExpenses: number;
   profit: number;
-  period: ReportPeriod;
-  startDate?: string;
-  endDate?: string;
+  period: string;
   topDishes: TopDish[];
   orderCount: number;
 }

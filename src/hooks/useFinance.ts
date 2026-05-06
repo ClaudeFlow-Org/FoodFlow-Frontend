@@ -15,7 +15,7 @@ export function useFinance() {
     try {
       setLoading(true);
       setError(null);
-      const data = await financeService.getDashboardMetrics();
+      const data = await financeService.getDashboardMetrics(period);
       setMetrics(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('dashboard.loadError'));
@@ -31,6 +31,7 @@ export function useFinance() {
       const data = await financeService.getReport(reportPeriod);
       setReport(data);
       setPeriod(reportPeriod);
+      setMetrics(await financeService.getDashboardMetrics(reportPeriod));
     } catch (err) {
       setError(err instanceof Error ? err.message : t('finance.loadError'));
     } finally {
@@ -40,7 +41,7 @@ export function useFinance() {
 
   useEffect(() => {
     void loadDashboard();
-  }, []);
+  }, [period]);
 
   return {
     metrics,

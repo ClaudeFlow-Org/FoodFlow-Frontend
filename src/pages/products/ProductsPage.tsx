@@ -13,10 +13,11 @@ import {
   Alert,
   InputAdornment,
   Autocomplete,
-  Typography,
-  Tooltip,
+  List,
+  ListItem,
+  ListItemText,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, Warning, Category } from '@mui/icons-material';
+import { Add, Edit, Delete, Search, Warning, Category as CategoryIcon } from '@mui/icons-material';
 import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/common';
 import { productService } from '@/services';
 import type { Product, ProductCategory, Column } from '@/types';
@@ -30,10 +31,10 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [openModal, setOpenModal] = useState(false);
-  const [openCategoriesModal, setOpenCategoriesModal] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
-  const [editCategory, setEditCategory] = useState<ProductCategory | null>(null);
-  const [categoryName, setCategoryName] = useState('');
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [categoryForm, setCategoryForm] = useState('');
+  const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; product: Product | null }>({
     open: false,
     product: null,
@@ -43,6 +44,7 @@ export default function ProductsPage() {
     category: null,
   });
   const [error, setError] = useState<string | null>(null);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -59,9 +61,11 @@ export default function ProductsPage() {
     void loadProducts();
   }, []);
 
-  const loadProducts = async () => {
+  const loadProducts = async (showLoader = true) => {
     try {
-      setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      }
       const [productsData, categoriesData] = await Promise.all([
         productService.getAll(),
         productService.getCategories(),
@@ -71,7 +75,9 @@ export default function ProductsPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : t('products.loadError'));
     } finally {
-      setLoading(false);
+      if (showLoader) {
+        setLoading(false);
+      }
     }
   };
 
@@ -110,17 +116,48 @@ export default function ProductsPage() {
     setEditProduct(null);
   };
 
-  const handleOpenCategoriesModal = () => {
-    setCategoryName('');
-    setEditCategory(null);
-    setOpenCategoriesModal(true);
-    setError(null);
+  const resetCategoryForm = () => {
+    setCategoryForm('');
+    setEditingCategory(null);
   };
 
-  const handleCloseCategoriesModal = () => {
-    setOpenCategoriesModal(false);
-    setEditCategory(null);
-    setCategoryName('');
+  const handleOpenCategoryDialog = () => {
+    setCategoryError(null);
+    resetCategoryForm();
+    setCategoryDialogOpen(true);
+  };
+
+  const handleCloseCategoryDialog = () => {
+    setCategoryDialogOpen(false);
+    setCategoryError(null);
+    resetCategoryForm();
+  };
+
+  const handleSaveCategory = async () => {
+    const name = categoryForm.trim();
+    if (!name) {
+      setCategoryError(t('products.categoryNameRequired'));
+      return;
+    }
+
+    try {
+      setCategoryError(null);
+      if (editingCategory) {
+        await productService.updateCategory(editingCategory.id, name);
+      } else {
+        await productService.createCategory(name);
+      }
+      resetCategoryForm();
+      void loadProducts(false);
+    } catch (err) {
+      setCategoryError(err instanceof Error ? err.message : t('products.categorySaveError'));
+    }
+  };
+
+  const handleEditCategory = (category: ProductCategory) => {
+    setEditingCategory(category);
+    setCategoryForm(category.name);
+    setCategoryError(null);
   };
 
   const handleSubmit = async () => {
@@ -149,39 +186,6 @@ export default function ProductsPage() {
     }
   };
 
-  const handleSaveCategory = async () => {
-    const name = categoryName.trim();
-    if (!name) {
-      setError(t('products.categoryRequired'));
-      return;
-    }
-
-    try {
-      if (editCategory) {
-        await productService.updateCategory(editCategory.id, name);
-      } else {
-        await productService.createCategory(name);
-      }
-      setCategoryName('');
-      setEditCategory(null);
-      void loadProducts();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('products.categorySaveError'));
-    }
-  };
-
-  const handleDeleteCategory = async () => {
-    if (!deleteCategoryConfirm.category) return;
-
-    try {
-      await productService.deleteCategory(deleteCategoryConfirm.category.id);
-      setDeleteCategoryConfirm({ open: false, category: null });
-      void loadProducts();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('products.categoryDeleteError'));
-    }
-  };
-
   const handleDelete = async () => {
     if (deleteConfirm.product) {
       try {
@@ -194,6 +198,22 @@ export default function ProductsPage() {
     }
   };
 
+  const handleDeleteCategory = async () => {
+    if (deleteCategoryConfirm.category) {
+      try {
+        await productService.deleteCategory(deleteCategoryConfirm.category.id);
+        if (formData.category === deleteCategoryConfirm.category.name) {
+          setFormData({ ...formData, category: '' });
+        }
+        setDeleteCategoryConfirm({ open: false, category: null });
+        resetCategoryForm();
+        void loadProducts(false);
+      } catch (err) {
+        setCategoryError(err instanceof Error ? err.message : t('products.categoryDeleteError'));
+      }
+    }
+  };
+
   const isLowStock = (product: Product) => product.stockLevel <= product.lowStockThreshold;
 
   const filteredProducts = products.filter(
@@ -202,13 +222,6 @@ export default function ProductsPage() {
       product.category?.toLowerCase().includes(search.toLowerCase()) ||
       product.supplier?.toLowerCase().includes(search.toLowerCase())
   );
-
-  const categoryOptions = Array.from(
-    new Set([
-      ...categories.map((category) => category.name),
-      ...products.map((product) => product.category).filter((category): category is string => Boolean(category)),
-    ])
-  ).sort((a, b) => a.localeCompare(b));
 
   const columns: Column<Product>[] = [
     {
@@ -273,6 +286,7 @@ export default function ProductsPage() {
   ];
 
   const lowStockCount = products.filter((p) => isLowStock(p)).length;
+  const categoryOptions = categories.map((category) => category.name);
 
   if (loading) {
     return <Box>{t('common.loading')}</Box>;
@@ -287,8 +301,9 @@ export default function ProductsPage() {
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
             <Button
               variant="outlined"
-              startIcon={<Category />}
-              onClick={handleOpenCategoriesModal}
+              startIcon={<CategoryIcon />}
+              onClick={handleOpenCategoryDialog}
+              sx={{ whiteSpace: 'nowrap' }}
             >
               {t('products.manageCategories')}
             </Button>
@@ -296,6 +311,7 @@ export default function ProductsPage() {
               variant="contained"
               startIcon={<Add />}
               onClick={() => handleOpenModal()}
+              sx={{ whiteSpace: 'nowrap' }}
             >
               {t('products.add')}
             </Button>
@@ -409,8 +425,7 @@ export default function ProductsPage() {
             <Autocomplete
               freeSolo
               options={categoryOptions}
-              value={formData.category || null}
-              inputValue={formData.category}
+              value={formData.category}
               onChange={(_event, value) => setFormData({ ...formData, category: value || '' })}
               onInputChange={(_event, value) => setFormData({ ...formData, category: value })}
               renderInput={(params) => (
@@ -418,7 +433,6 @@ export default function ProductsPage() {
                   {...params}
                   label={t('products.category')}
                   placeholder={t('products.categoryPlaceholder')}
-                  helperText={t('products.categoryHelp')}
                 />
               )}
             />
@@ -438,64 +452,40 @@ export default function ProductsPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Categories Dialog */}
-      <Dialog open={openCategoriesModal} onClose={handleCloseCategoriesModal} maxWidth="sm" fullWidth>
+      <Dialog open={categoryDialogOpen} onClose={handleCloseCategoryDialog} maxWidth="sm" fullWidth>
         <DialogTitle>{t('products.manageCategories')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2.25} sx={{ mt: 1 }}>
-            {error && <Alert severity="error">{error}</Alert>}
+            {categoryError && <Alert severity="error">{categoryError}</Alert>}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
               <TextField
-                label={editCategory ? t('products.editCategory') : t('products.newCategory')}
+                label={editingCategory ? t('products.renameCategory') : t('products.newCategory')}
                 fullWidth
-                value={categoryName}
-                onChange={(event) => setCategoryName(event.target.value)}
+                value={categoryForm}
+                onChange={(e) => setCategoryForm(e.target.value)}
+                placeholder={t('products.categoryPlaceholder')}
               />
-              <Button
-                variant="contained"
-                onClick={() => void handleSaveCategory()}
-                sx={{ minWidth: { sm: 120 } }}
-              >
-                {editCategory ? t('common.update') : t('common.create')}
+              <Button variant="contained" onClick={() => void handleSaveCategory()} sx={{ whiteSpace: 'nowrap' }}>
+                {editingCategory ? t('common.update') : t('common.create')}
               </Button>
+              {editingCategory && (
+                <Button variant="text" onClick={resetCategoryForm} sx={{ whiteSpace: 'nowrap' }}>
+                  {t('common.cancel')}
+                </Button>
+              )}
             </Stack>
 
-            <Stack spacing={1}>
-              {categories.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  {t('products.noCategories')}
-                </Typography>
-              ) : (
-                categories.map((category) => (
-                  <Stack
+            {categories.length > 0 ? (
+              <List disablePadding>
+                {categories.map((category) => (
+                  <ListItem
                     key={category.id}
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    spacing={1.5}
-                    sx={{
-                      p: 1.25,
-                      border: 1,
-                      borderColor: 'divider',
-                      borderRadius: 1,
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ fontWeight: 700, minWidth: 0 }}>
-                      {category.name}
-                    </Typography>
-                    <Stack direction="row" spacing={0.5}>
-                      <Tooltip title={t('common.edit')}>
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            setEditCategory(category);
-                            setCategoryName(category.name);
-                          }}
-                        >
+                    disableGutters
+                    secondaryAction={
+                      <Stack direction="row" spacing={0.5}>
+                        <IconButton size="small" onClick={() => handleEditCategory(category)}>
                           <Edit fontSize="small" />
                         </IconButton>
-                      </Tooltip>
-                      <Tooltip title={t('common.delete')}>
                         <IconButton
                           size="small"
                           color="error"
@@ -503,16 +493,26 @@ export default function ProductsPage() {
                         >
                           <Delete fontSize="small" />
                         </IconButton>
-                      </Tooltip>
-                    </Stack>
-                  </Stack>
-                ))
-              )}
-            </Stack>
+                      </Stack>
+                    }
+                    sx={{ pr: 9 }}
+                  >
+                    <ListItemText
+                      primary={category.name}
+                      secondary={t('products.categoryUsage', {
+                        count: products.filter((product) => product.category === category.name).length,
+                      })}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Alert severity="info">{t('products.noCategories')}</Alert>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions sx={{ gap: 1 }}>
-          <Button onClick={handleCloseCategoriesModal}>{t('common.close')}</Button>
+          <Button onClick={handleCloseCategoryDialog}>{t('common.close')}</Button>
         </DialogActions>
       </Dialog>
 

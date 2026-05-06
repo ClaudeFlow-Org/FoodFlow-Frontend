@@ -20,8 +20,6 @@ interface BackendProduct {
   createdAt: string;
 }
 
-const DEFAULT_LOW_STOCK_THRESHOLD = 10;
-
 const mapProduct = (product: BackendProduct): Product => ({
   id: product.id,
   name: product.name,
@@ -31,7 +29,7 @@ const mapProduct = (product: BackendProduct): Product => ({
   stockLevel: product.stockLevel,
   unitOfMeasure: product.unitOfMeasure,
   unitCost: product.unitCost,
-  lowStockThreshold: product.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD,
+  lowStockThreshold: product.lowStockThreshold ?? 10,
   createdAt: product.createdAt,
   updatedAt: product.createdAt,
 });

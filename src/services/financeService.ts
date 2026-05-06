@@ -14,9 +14,7 @@ interface BackendTopDish {
 }
 
 interface BackendDashboard {
-  period?: string;
-  startDate?: string;
-  endDate?: string;
+  period: string;
   totalIncome: number;
   totalExpenses: number;
   netProfit: number;
@@ -52,9 +50,7 @@ const mapDashboardMetrics = (metrics: BackendDashboard): DashboardMetrics => ({
   totalIncome: metrics.totalIncome,
   totalExpenses: metrics.totalExpenses,
   profit: metrics.netProfit,
-  period: (metrics.period as ReportPeriod) || 'DAILY',
-  startDate: metrics.startDate,
-  endDate: metrics.endDate,
+  period: metrics.period,
   topDishes: metrics.top5Dishes || [],
   orderCount: metrics.orderCount || 0,
 });
