@@ -172,7 +172,7 @@ export default function ProductsPage() {
         unitOfMeasure: formData.unitOfMeasure,
         unitCost: parseFloat(formData.unitCost),
         lowStockThreshold: parseFloat(formData.lowStockThreshold),
-        category: formData.category || undefined,
+        category: formData.category.trim(),
         supplier: formData.supplier || undefined,
       };
 
