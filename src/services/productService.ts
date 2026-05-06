@@ -34,10 +34,10 @@ const mapProduct = (product: BackendProduct): Product => ({
   updatedAt: product.createdAt,
 });
 
-const toProductRequest = (data: CreateProductRequest | UpdateProductRequest) => ({
+const toProductRequest = (data: CreateProductRequest | UpdateProductRequest, includeCategory = true) => ({
   name: data.name,
   description: data.description,
-  category: data.category,
+  category: includeCategory ? data.category : undefined,
   supplier: data.supplier,
   stockLevel: data.stockLevel,
   unitOfMeasure: data.unitOfMeasure,
@@ -61,7 +61,7 @@ class ProductService {
   async create(data: CreateProductRequest): Promise<Product> {
     const response = await api.post<ApiResponse<BackendProduct>>(
       this.basePath,
-      toProductRequest(data)
+      toProductRequest(data, false)
     );
     return mapProduct(response.data.data);
   }
@@ -69,7 +69,15 @@ class ProductService {
   async update(id: number, data: UpdateProductRequest): Promise<Product> {
     const response = await api.put<ApiResponse<BackendProduct>>(
       `${this.basePath}/${id}`,
-      toProductRequest(data)
+      toProductRequest(data, false)
+    );
+    return mapProduct(response.data.data);
+  }
+
+  async updateProductCategory(id: number, name: string): Promise<Product> {
+    const response = await api.put<ApiResponse<BackendProduct>>(
+      `${this.basePath}/${id}/category`,
+      { name }
     );
     return mapProduct(response.data.data);
   }

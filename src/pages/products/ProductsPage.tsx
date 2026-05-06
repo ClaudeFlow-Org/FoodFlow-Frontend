@@ -165,6 +165,7 @@ export default function ProductsPage() {
 
   const handleSubmit = async () => {
     try {
+      const selectedCategory = formData.category.trim();
       const payload = {
         name: formData.name,
         description: formData.description || undefined,
@@ -172,14 +173,17 @@ export default function ProductsPage() {
         unitOfMeasure: formData.unitOfMeasure,
         unitCost: parseFloat(formData.unitCost),
         lowStockThreshold: parseFloat(formData.lowStockThreshold),
-        category: formData.category.trim(),
         supplier: formData.supplier || undefined,
       };
 
       if (editProduct) {
         await productService.update(editProduct.id, payload);
+        await productService.updateProductCategory(editProduct.id, selectedCategory);
       } else {
-        await productService.create(payload);
+        const createdProduct = await productService.create(payload);
+        if (selectedCategory) {
+          await productService.updateProductCategory(createdProduct.id, selectedCategory);
+        }
       }
 
       handleCloseModal();
