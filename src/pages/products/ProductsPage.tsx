@@ -176,18 +176,24 @@ export default function ProductsPage() {
         supplier: formData.supplier || undefined,
       };
 
+      let savedProduct: Product;
       if (editProduct) {
-        await productService.update(editProduct.id, payload);
-        await productService.updateProductCategory(editProduct.id, selectedCategory);
+        savedProduct = await productService.update(editProduct.id, payload);
+        savedProduct = await productService.updateProductCategory(editProduct.id, selectedCategory);
+        setProducts((currentProducts) =>
+          currentProducts.map((product) =>
+            product.id === savedProduct.id ? savedProduct : product
+          )
+        );
       } else {
-        const createdProduct = await productService.create(payload);
+        savedProduct = await productService.create(payload);
         if (selectedCategory) {
-          await productService.updateProductCategory(createdProduct.id, selectedCategory);
+          savedProduct = await productService.updateProductCategory(savedProduct.id, selectedCategory);
         }
+        setProducts((currentProducts) => [savedProduct, ...currentProducts]);
       }
 
       handleCloseModal();
-      void loadProducts();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('products.saveError'));
     }
