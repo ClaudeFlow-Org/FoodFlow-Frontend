@@ -24,6 +24,12 @@ import { orderService, dishService } from '@/services';
 import type { Order, Dish, CreateLineItemRequest, OrderType, OrderStatus, Column } from '@/types';
 import { Receipt } from '@mui/icons-material';
 import { useI18n } from '@/i18n';
+import {
+  getLocalizedErrorMessage,
+  toErrorMessage,
+  translatedError,
+  type ErrorMessage,
+} from '@/utils/errorMessages';
 
 const orderTypes: OrderType[] = ['DINE_IN', 'TAKEAWAY', 'DELIVERY'];
 
@@ -51,7 +57,7 @@ export default function OrdersPage() {
     open: false,
     order: null,
   });
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorMessage | null>(null);
 
   const [formData, setFormData] = useState({
     tableIdentifier: '',
@@ -63,6 +69,8 @@ export default function OrdersPage() {
     void loadData();
   }, []);
 
+  const errorMessage = error ? getLocalizedErrorMessage(error, t, 'orders.loadError') : null;
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -73,7 +81,7 @@ export default function OrdersPage() {
       setOrders(ordersData);
       setDishes(dishesData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('orders.loadError'));
+      setError(toErrorMessage(err, 'orders.loadError'));
     } finally {
       setLoading(false);
     }
@@ -133,7 +141,7 @@ export default function OrdersPage() {
   const handleSubmit = async () => {
     try {
       if (lineItems.length === 0) {
-        setError(t('orders.emptyLineItems'));
+        setError(translatedError('orders.emptyLineItems'));
         return;
       }
 
@@ -150,7 +158,7 @@ export default function OrdersPage() {
       handleCloseModal();
       void loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('orders.createError'));
+      setError(toErrorMessage(err, 'orders.createError'));
     }
   };
 
@@ -161,7 +169,7 @@ export default function OrdersPage() {
         setDeleteConfirm({ open: false, order: null });
         void loadData();
       } catch (err) {
-        setError(err instanceof Error ? err.message : t('orders.deleteError'));
+        setError(toErrorMessage(err, 'orders.deleteError'));
       }
     }
   };
@@ -171,7 +179,7 @@ export default function OrdersPage() {
       await orderService.advanceStatus(order.id);
       void loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('orders.loadError'));
+      setError(toErrorMessage(err, 'orders.loadError'));
     }
   };
 
@@ -180,7 +188,7 @@ export default function OrdersPage() {
       await orderService.cancelStatus(order.id);
       void loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('orders.loadError'));
+      setError(toErrorMessage(err, 'orders.loadError'));
     }
   };
 
@@ -286,7 +294,7 @@ export default function OrdersPage() {
         }
       />
 
-      {error && <Alert severity="error" sx={{ mb: 2.5 }}>{error}</Alert>}
+      {errorMessage && <Alert severity="error" sx={{ mb: 2.5 }}>{errorMessage}</Alert>}
 
       {orders.length === 0 ? (
         <EmptyState
@@ -312,7 +320,7 @@ export default function OrdersPage() {
         <DialogTitle>{t('orders.createTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 1 }}>
-            {error && <Alert severity="error">{error}</Alert>}
+            {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
 
             <Stack direction="row" spacing={2}>
               <TextField

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,6 +17,7 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { useI18n } from '@/i18n';
 import { AppControls } from '@/components/common';
+import { getLocalizedErrorMessage, toErrorMessage, type ErrorMessage } from '@/utils/errorMessages';
 
 const brandLogoSrc = '/foodflow-mark.png';
 
@@ -28,8 +29,8 @@ type LoginFormData = {
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuthStore();
-  const { t } = useI18n();
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const { language, t } = useI18n();
+  const [submitError, setSubmitError] = useState<ErrorMessage | null>(null);
   const loginSchema = useMemo(
     () =>
       z.object({
@@ -45,6 +46,7 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    trigger,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -53,6 +55,18 @@ export default function LoginPage() {
       password: '',
     },
   });
+  const validationErrorCount = Object.keys(errors).length;
+  const errorMessage = error
+    ? getLocalizedErrorMessage(error, t, 'auth.login.failed')
+    : submitError
+      ? getLocalizedErrorMessage(submitError, t, 'auth.login.failed')
+      : null;
+
+  useEffect(() => {
+    if (validationErrorCount > 0) {
+      void trigger();
+    }
+  }, [language, trigger, validationErrorCount]);
 
   const onSubmit = async (data: LoginFormData) => {
     setSubmitError(null);
@@ -62,7 +76,7 @@ export default function LoginPage() {
       await login(data);
       void navigate('/dashboard');
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : t('auth.login.failed'));
+      setSubmitError(toErrorMessage(err, 'auth.login.failed'));
     }
   };
 
@@ -106,9 +120,9 @@ export default function LoginPage() {
             {t('auth.login.subtitle')}
           </Typography>
 
-          {(error || submitError) && (
+          {errorMessage && (
             <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {error || submitError}
+              {errorMessage}
             </Alert>
           )}
 

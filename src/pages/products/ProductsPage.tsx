@@ -26,6 +26,96 @@ import { productService } from '@/services';
 import type { Product, ProductCategory, Column } from '@/types';
 import { Inventory2Outlined } from '@mui/icons-material';
 import { useI18n } from '@/i18n';
+import {
+  getLocalizedErrorMessage,
+  toErrorMessage,
+  translatedError,
+  type ErrorMessage,
+} from '@/utils/errorMessages';
+
+const PRODUCT_STOCK_LIMIT = 5000;
+const MAX_PRODUCT_COST = 999_999;
+const LOW_STOCK_THRESHOLD_LIMIT = 5000;
+
+interface ProductFormData {
+  name: string;
+  description: string;
+  stockLevel: string;
+  unitOfMeasure: string;
+  unitCost: string;
+  lowStockThreshold: string;
+  category: string;
+  supplier: string;
+}
+
+const parseFormNumber = (value: string) => {
+  if (value.trim() === '') {
+    return null;
+  }
+
+  const number = Number(value);
+  return Number.isFinite(number) ? number : Number.NaN;
+};
+
+const validateProductForm = (formData: ProductFormData): ErrorMessage | null => {
+  const stockLevel = parseFormNumber(formData.stockLevel);
+  const unitCost = parseFormNumber(formData.unitCost);
+  const lowStockThreshold = parseFormNumber(formData.lowStockThreshold);
+
+  if (!formData.name.trim()) {
+    return translatedError('products.validation.nameRequired');
+  }
+
+  if (stockLevel === null) {
+    return translatedError('products.validation.stockRequired');
+  }
+
+  if (Number.isNaN(stockLevel)) {
+    return translatedError('products.validation.stockInvalid');
+  }
+
+  if (stockLevel < 0) {
+    return translatedError('products.validation.stockNonNegative');
+  }
+
+  if (stockLevel >= PRODUCT_STOCK_LIMIT) {
+    return translatedError('products.validation.stockMax', { limit: PRODUCT_STOCK_LIMIT });
+  }
+
+  if (!formData.unitOfMeasure.trim()) {
+    return translatedError('products.validation.unitRequired');
+  }
+
+  if (unitCost === null) {
+    return translatedError('products.validation.unitCostRequired');
+  }
+
+  if (Number.isNaN(unitCost)) {
+    return translatedError('products.validation.unitCostInvalid');
+  }
+
+  if (unitCost < 0) {
+    return translatedError('products.validation.unitCostNonNegative');
+  }
+
+  if (unitCost > MAX_PRODUCT_COST) {
+    return translatedError('products.validation.unitCostMax', { max: MAX_PRODUCT_COST });
+  }
+
+  if (Number.isNaN(lowStockThreshold)) {
+    return translatedError('products.validation.lowStockInvalid');
+  }
+
+  if (lowStockThreshold !== null && lowStockThreshold < 0) {
+    return translatedError('products.validation.lowStockNonNegative');
+  }
+
+  if (lowStockThreshold !== null && lowStockThreshold >= LOW_STOCK_THRESHOLD_LIMIT) {
+    return translatedError('products.validation.lowStockMax', { limit: LOW_STOCK_THRESHOLD_LIMIT });
+  }
+
+  return null;
+};
 
 export default function ProductsPage() {
   const { t } = useI18n();
@@ -46,10 +136,10 @@ export default function ProductsPage() {
     open: false,
     category: null,
   });
-  const [error, setError] = useState<string | null>(null);
-  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorMessage | null>(null);
+  const [categoryError, setCategoryError] = useState<ErrorMessage | null>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ProductFormData>({
     name: '',
     description: '',
     stockLevel: '',
@@ -64,6 +154,11 @@ export default function ProductsPage() {
     void loadProducts();
   }, []);
 
+  const errorMessage = error ? getLocalizedErrorMessage(error, t, 'products.loadError') : null;
+  const categoryErrorMessage = categoryError
+    ? getLocalizedErrorMessage(categoryError, t, 'products.categorySaveError')
+    : null;
+
   const loadProducts = async (showLoader = true) => {
     try {
       if (showLoader) {
@@ -76,7 +171,7 @@ export default function ProductsPage() {
       setProducts(productsData);
       setCategories(categoriesData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('products.loadError'));
+      setError(toErrorMessage(err, 'products.loadError'));
     } finally {
       if (showLoader) {
         setLoading(false);
@@ -139,7 +234,7 @@ export default function ProductsPage() {
   const handleSaveCategory = async () => {
     const name = categoryForm.trim();
     if (!name) {
-      setCategoryError(t('products.categoryNameRequired'));
+      setCategoryError(translatedError('products.categoryNameRequired'));
       return;
     }
 
@@ -153,7 +248,7 @@ export default function ProductsPage() {
       resetCategoryForm();
       void loadProducts(false);
     } catch (err) {
-      setCategoryError(err instanceof Error ? err.message : t('products.categorySaveError'));
+      setCategoryError(toErrorMessage(err, 'products.categorySaveError'));
     }
   };
 
@@ -164,16 +259,23 @@ export default function ProductsPage() {
   };
 
   const handleSubmit = async () => {
+    const validationError = validateProductForm(formData);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     try {
       const selectedCategory = formData.category.trim();
+      const lowStockThreshold = parseFormNumber(formData.lowStockThreshold);
       const payload = {
-        name: formData.name,
-        description: formData.description || undefined,
-        stockLevel: parseFloat(formData.stockLevel),
-        unitOfMeasure: formData.unitOfMeasure,
-        unitCost: parseFloat(formData.unitCost),
-        lowStockThreshold: parseFloat(formData.lowStockThreshold),
-        supplier: formData.supplier || undefined,
+        name: formData.name.trim(),
+        description: formData.description.trim() || undefined,
+        stockLevel: Number(formData.stockLevel),
+        unitOfMeasure: formData.unitOfMeasure.trim(),
+        unitCost: Number(formData.unitCost),
+        lowStockThreshold: lowStockThreshold === null ? undefined : lowStockThreshold,
+        supplier: formData.supplier.trim() || undefined,
       };
 
       let savedProduct: Product;
@@ -195,7 +297,7 @@ export default function ProductsPage() {
 
       handleCloseModal();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('products.saveError'));
+      setError(toErrorMessage(err, 'products.saveError'));
     }
   };
 
@@ -206,7 +308,7 @@ export default function ProductsPage() {
         setDeleteConfirm({ open: false, product: null });
         void loadProducts();
       } catch (err) {
-        setError(err instanceof Error ? err.message : t('products.deleteError'));
+        setError(toErrorMessage(err, 'products.deleteError'));
       }
     }
   };
@@ -222,7 +324,7 @@ export default function ProductsPage() {
         resetCategoryForm();
         void loadProducts(false);
       } catch (err) {
-        setCategoryError(err instanceof Error ? err.message : t('products.categoryDeleteError'));
+        setCategoryError(toErrorMessage(err, 'products.categoryDeleteError'));
       }
     }
   };
@@ -342,7 +444,7 @@ export default function ProductsPage() {
         </Alert>
       )}
 
-      {error && <Alert severity="error" sx={{ mb: 2.5 }}>{error}</Alert>}
+      {errorMessage && <Alert severity="error" sx={{ mb: 2.5 }}>{errorMessage}</Alert>}
 
       <Box sx={{ mb: 3 }}>
         <TextField
@@ -386,7 +488,7 @@ export default function ProductsPage() {
         <DialogTitle>{editProduct ? t('products.editTitle') : t('products.addTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            {error && <Alert severity="error">{error}</Alert>}
+            {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
             <TextField
               label={t('products.name')}
               fullWidth
@@ -410,6 +512,9 @@ export default function ProductsPage() {
                 value={formData.stockLevel}
                 onChange={(e) => setFormData({ ...formData, stockLevel: e.target.value })}
                 required
+                InputProps={{
+                  inputProps: { min: 0, max: PRODUCT_STOCK_LIMIT - 1, step: 'any' },
+                }}
               />
               <TextField
                 label={t('products.unitOfMeasure')}
@@ -429,6 +534,7 @@ export default function ProductsPage() {
               required
               InputProps={{
                 startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                inputProps: { min: 0, max: MAX_PRODUCT_COST, step: 'any' },
               }}
             />
             <TextField
@@ -438,6 +544,9 @@ export default function ProductsPage() {
               value={formData.lowStockThreshold}
               onChange={(e) => setFormData({ ...formData, lowStockThreshold: e.target.value })}
               helperText={t('products.lowStockHelp')}
+              InputProps={{
+                inputProps: { min: 0, max: LOW_STOCK_THRESHOLD_LIMIT - 1, step: 'any' },
+              }}
             />
             <Autocomplete
               freeSolo
@@ -473,7 +582,7 @@ export default function ProductsPage() {
               <ToggleButtonGroup
                 exclusive
                 value={formData.category || ''}
-                onChange={(_event, value) => setFormData({ ...formData, category: value || '' })}
+                onChange={(_event, value: string | null) => setFormData({ ...formData, category: value || '' })}
                 sx={{
                   display: 'flex',
                   flexWrap: 'wrap',
@@ -531,7 +640,7 @@ export default function ProductsPage() {
         <DialogTitle>{t('products.manageCategories')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2.25} sx={{ mt: 1 }}>
-            {categoryError && <Alert severity="error">{categoryError}</Alert>}
+            {categoryErrorMessage && <Alert severity="error">{categoryErrorMessage}</Alert>}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
               <TextField
                 label={editingCategory ? t('products.renameCategory') : t('products.newCategory')}

@@ -1,9 +1,15 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { Box, Button, Container, Paper, Stack, Typography } from '@mui/material';
 import { ErrorOutline } from '@mui/icons-material';
+import { useI18n } from '@/i18n';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
+  title?: string;
+  message?: string;
+  reloadLabel?: string;
+  tryAgainLabel?: string;
+  supportText?: string;
 }
 
 interface ErrorBoundaryState {
@@ -89,12 +95,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
                 {/* Error Title */}
                 <Typography variant="h4" component="h1" fontWeight="bold">
-                  Something went wrong
+                  {this.props.title || 'No pudimos mostrar esta pantalla'}
                 </Typography>
 
                 {/* Error Message */}
                 <Typography variant="body1" color="text.secondary">
-                  {this.state.error?.message || 'An unexpected error occurred while rendering this page.'}
+                  {this.props.message || 'Algo falló al cargar la vista. Recarga la página o vuelve a intentarlo.'}
                 </Typography>
 
                 {/* Additional Info */}
@@ -124,20 +130,20 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                     onClick={this.handleReload}
                     size="large"
                   >
-                    Reload Page
+                    {this.props.reloadLabel || 'Recargar página'}
                   </Button>
                   <Button
                     variant="outlined"
                     onClick={this.handleReset}
                     size="large"
                   >
-                    Try Again
+                    {this.props.tryAgainLabel || 'Intentar de nuevo'}
                   </Button>
                 </Stack>
 
                 {/* Support Text */}
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                  If this problem persists, please contact support or try again later.
+                  {this.props.supportText || 'Si el problema continúa, vuelve a intentar más tarde.'}
                 </Typography>
               </Stack>
             </Paper>
@@ -148,4 +154,20 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     return this.props.children;
   }
+}
+
+export function LocalizedErrorBoundary({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
+
+  return (
+    <ErrorBoundary
+      title={t('errorBoundary.title')}
+      message={t('errorBoundary.message')}
+      reloadLabel={t('errorBoundary.reload')}
+      tryAgainLabel={t('errorBoundary.tryAgain')}
+      supportText={t('errorBoundary.support')}
+    >
+      {children}
+    </ErrorBoundary>
+  );
 }

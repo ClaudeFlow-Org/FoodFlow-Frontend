@@ -1,13 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, LoginRequest, RegisterRequest, UpdateProfileRequest } from '@/types';
+import { toErrorMessage, type ErrorMessage } from '@/utils/errorMessages';
 
 interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  error: string | null;
+  error: ErrorMessage | null;
 
   // Actions
   login: (credentials: LoginRequest) => Promise<void>;
@@ -46,13 +47,12 @@ export const useAuthStore = create<AuthState>()(
           // Store token in localStorage for axios interceptor
           localStorage.setItem('token', response.token);
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Login failed';
           set({
             user: null,
             token: null,
             isAuthenticated: false,
             isLoading: false,
-            error: message,
+            error: toErrorMessage(error, 'auth.login.failed'),
           });
           throw error;
         }
@@ -81,13 +81,12 @@ export const useAuthStore = create<AuthState>()(
           // Store token in localStorage for axios interceptor
           localStorage.setItem('token', loginResponse.token);
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Registration failed';
           set({
             user: null,
             token: null,
             isAuthenticated: false,
             isLoading: false,
-            error: message,
+            error: toErrorMessage(error, 'auth.register.failed'),
           });
           throw error;
         }
@@ -115,8 +114,7 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           });
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Update failed';
-          set({ isLoading: false, error: message });
+          set({ isLoading: false, error: toErrorMessage(error, 'settings.profileUpdateError') });
           throw error;
         }
       },
@@ -133,8 +131,7 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           });
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Failed to refresh profile';
-          set({ isLoading: false, error: message });
+          set({ isLoading: false, error: toErrorMessage(error, 'settings.profileUpdateError') });
           throw error;
         }
       },

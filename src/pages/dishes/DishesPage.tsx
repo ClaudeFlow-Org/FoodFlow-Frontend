@@ -18,6 +18,7 @@ import { dishService } from '@/services';
 import type { Dish, Column } from '@/types';
 import { Restaurant } from '@mui/icons-material';
 import { useI18n } from '@/i18n';
+import { getLocalizedErrorMessage, toErrorMessage, type ErrorMessage } from '@/utils/errorMessages';
 
 export default function DishesPage() {
   const { t } = useI18n();
@@ -30,7 +31,7 @@ export default function DishesPage() {
     open: false,
     dish: null,
   });
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorMessage | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -43,13 +44,15 @@ export default function DishesPage() {
     void loadDishes();
   }, []);
 
+  const errorMessage = error ? getLocalizedErrorMessage(error, t, 'dishes.loadError') : null;
+
   const loadDishes = async () => {
     try {
       setLoading(true);
       const data = await dishService.getAll();
       setDishes(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('dishes.loadError'));
+      setError(toErrorMessage(err, 'dishes.loadError'));
     } finally {
       setLoading(false);
     }
@@ -100,7 +103,7 @@ export default function DishesPage() {
       handleCloseModal();
       void loadDishes();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('dishes.saveError'));
+      setError(toErrorMessage(err, 'dishes.saveError'));
     }
   };
 
@@ -111,7 +114,7 @@ export default function DishesPage() {
         setDeleteConfirm({ open: false, dish: null });
         void loadDishes();
       } catch (err) {
-        setError(err instanceof Error ? err.message : t('dishes.deleteError'));
+        setError(toErrorMessage(err, 'dishes.deleteError'));
       }
     }
   };
@@ -186,7 +189,7 @@ export default function DishesPage() {
         }
       />
 
-      {error && <Alert severity="error" sx={{ mb: 2.5 }}>{error}</Alert>}
+      {errorMessage && <Alert severity="error" sx={{ mb: 2.5 }}>{errorMessage}</Alert>}
 
       <Box sx={{ mb: 3 }}>
         <TextField
@@ -230,7 +233,7 @@ export default function DishesPage() {
         <DialogTitle>{editDish ? t('dishes.editTitle') : t('dishes.addTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            {error && <Alert severity="error">{error}</Alert>}
+            {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
             <TextField
               label={t('dishes.name')}
               fullWidth

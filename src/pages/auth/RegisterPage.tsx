@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,6 +17,7 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { useI18n } from '@/i18n';
 import { AppControls } from '@/components/common';
+import { getLocalizedErrorMessage, toErrorMessage, type ErrorMessage } from '@/utils/errorMessages';
 
 const brandLogoSrc = '/foodflow-mark.png';
 
@@ -30,8 +31,8 @@ type RegisterFormData = {
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { register: registerUser, isLoading, error, clearError } = useAuthStore();
-  const { t } = useI18n();
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const { language, t } = useI18n();
+  const [submitError, setSubmitError] = useState<ErrorMessage | null>(null);
   const registerSchema = useMemo(
     () =>
       z
@@ -54,6 +55,7 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
+    trigger,
     formState: { errors },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -64,6 +66,18 @@ export default function RegisterPage() {
       confirmPassword: '',
     },
   });
+  const validationErrorCount = Object.keys(errors).length;
+  const errorMessage = error
+    ? getLocalizedErrorMessage(error, t, 'auth.register.failed')
+    : submitError
+      ? getLocalizedErrorMessage(submitError, t, 'auth.register.failed')
+      : null;
+
+  useEffect(() => {
+    if (validationErrorCount > 0) {
+      void trigger();
+    }
+  }, [language, trigger, validationErrorCount]);
 
   const onSubmit = async (data: RegisterFormData) => {
     setSubmitError(null);
@@ -77,7 +91,7 @@ export default function RegisterPage() {
       });
       void navigate('/dashboard');
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : t('auth.register.failed'));
+      setSubmitError(toErrorMessage(err, 'auth.register.failed'));
     }
   };
 
@@ -121,9 +135,9 @@ export default function RegisterPage() {
             {t('auth.register.subtitle')}
           </Typography>
 
-          {(error || submitError) && (
+          {errorMessage && (
             <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {error || submitError}
+              {errorMessage}
             </Alert>
           )}
 
