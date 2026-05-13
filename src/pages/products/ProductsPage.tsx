@@ -275,13 +275,13 @@ export default function ProductsPage() {
         unitOfMeasure: formData.unitOfMeasure.trim(),
         unitCost: Number(formData.unitCost),
         lowStockThreshold: lowStockThreshold === null ? undefined : lowStockThreshold,
+        category: selectedCategory,
         supplier: formData.supplier.trim() || undefined,
       };
 
       let savedProduct: Product;
       if (editProduct) {
         savedProduct = await productService.update(editProduct.id, payload);
-        savedProduct = await productService.updateProductCategory(editProduct.id, selectedCategory);
         setProducts((currentProducts) =>
           currentProducts.map((product) =>
             product.id === savedProduct.id ? savedProduct : product
@@ -289,9 +289,6 @@ export default function ProductsPage() {
         );
       } else {
         savedProduct = await productService.create(payload);
-        if (selectedCategory) {
-          savedProduct = await productService.updateProductCategory(savedProduct.id, selectedCategory);
-        }
         setProducts((currentProducts) => [savedProduct, ...currentProducts]);
       }
 

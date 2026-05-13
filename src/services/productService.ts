@@ -61,7 +61,7 @@ class ProductService {
   async create(data: CreateProductRequest): Promise<Product> {
     const response = await api.post<ApiResponse<BackendProduct>>(
       this.basePath,
-      toProductRequest(data, false)
+      toProductRequest(data)
     );
     return mapProduct(response.data.data);
   }
@@ -69,7 +69,7 @@ class ProductService {
   async update(id: number, data: UpdateProductRequest): Promise<Product> {
     const response = await api.put<ApiResponse<BackendProduct>>(
       `${this.basePath}/${id}`,
-      toProductRequest(data, false)
+      toProductRequest(data)
     );
     return mapProduct(response.data.data);
   }

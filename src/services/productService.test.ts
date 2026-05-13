@@ -66,8 +66,8 @@ describe('productService', () => {
   });
   // fin prueba
 
-  // Prueba unitaria: crea producto sin enviar categoria legacy (FE-UT-017)
-  it('posts the create-product payload expected by the backend', async () => {
+  // Prueba unitaria: crea producto enviando la categoria en la misma solicitud (FE-UT-017)
+  it('posts the create-product payload with category in the same request', async () => {
     mockedApi.post.mockResolvedValueOnce({
       data: {
         success: true,
@@ -97,17 +97,62 @@ describe('productService', () => {
     expect(mockedApi.post).toHaveBeenCalledWith('/api/products', expect.any(Object));
     expect(requestBody).toMatchObject({
       name: 'Harina',
+      category: 'Panaderia',
       stockLevel: 12,
       unitOfMeasure: 'kg',
       unitCost: 2,
       lowStockThreshold: 4,
     });
-    expect(requestBody.category).toBeUndefined();
     expect(product).toMatchObject({
       id: 6,
       name: 'Harina',
       category: 'Panaderia',
       lowStockThreshold: 4,
+    });
+  });
+  // fin prueba
+
+  // Prueba unitaria: actualiza producto enviando categoria en la misma solicitud (FE-UT-018)
+  it('puts the update-product payload with category in the same request', async () => {
+    mockedApi.put.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          id: 6,
+          name: 'Harina integral',
+          category: 'Granos',
+          stockLevel: 8,
+          unitOfMeasure: 'kg',
+          unitCost: 2.4,
+          lowStockThreshold: 3,
+          createdAt: '2026-05-08T10:00:00',
+        },
+      },
+    });
+
+    const product = await productService.update(6, {
+      name: 'Harina integral',
+      category: 'Granos',
+      stockLevel: 8,
+      unitOfMeasure: 'kg',
+      unitCost: 2.4,
+      lowStockThreshold: 3,
+    });
+
+    const requestBody = mockedApi.put.mock.calls[0][1] as Record<string, unknown>;
+    expect(mockedApi.put).toHaveBeenCalledWith('/api/products/6', expect.any(Object));
+    expect(requestBody).toMatchObject({
+      name: 'Harina integral',
+      category: 'Granos',
+      stockLevel: 8,
+      unitOfMeasure: 'kg',
+      unitCost: 2.4,
+      lowStockThreshold: 3,
+    });
+    expect(product).toMatchObject({
+      id: 6,
+      name: 'Harina integral',
+      category: 'Granos',
     });
   });
   // fin prueba
