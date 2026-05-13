@@ -33,9 +33,9 @@ import {
   type ErrorMessage,
 } from '@/utils/errorMessages';
 
-const PRODUCT_STOCK_LIMIT = 5000;
+const PRODUCT_STOCK_LIMIT = 10000;
 const MAX_PRODUCT_COST = 999_999;
-const LOW_STOCK_THRESHOLD_LIMIT = 5000;
+const LOW_STOCK_THRESHOLD_LIMIT = 10000;
 
 interface ProductFormData {
   name: string;
@@ -78,7 +78,7 @@ const validateProductForm = (formData: ProductFormData): ErrorMessage | null => 
     return translatedError('products.validation.stockNonNegative');
   }
 
-  if (stockLevel >= PRODUCT_STOCK_LIMIT) {
+  if (stockLevel > PRODUCT_STOCK_LIMIT) {
     return translatedError('products.validation.stockMax', { limit: PRODUCT_STOCK_LIMIT });
   }
 
@@ -110,7 +110,7 @@ const validateProductForm = (formData: ProductFormData): ErrorMessage | null => 
     return translatedError('products.validation.lowStockNonNegative');
   }
 
-  if (lowStockThreshold !== null && lowStockThreshold >= LOW_STOCK_THRESHOLD_LIMIT) {
+  if (lowStockThreshold !== null && lowStockThreshold > LOW_STOCK_THRESHOLD_LIMIT) {
     return translatedError('products.validation.lowStockMax', { limit: LOW_STOCK_THRESHOLD_LIMIT });
   }
 
@@ -513,7 +513,7 @@ export default function ProductsPage() {
                 onChange={(e) => setFormData({ ...formData, stockLevel: e.target.value })}
                 required
                 InputProps={{
-                  inputProps: { min: 0, max: PRODUCT_STOCK_LIMIT - 1, step: 'any' },
+                  inputProps: { min: 0, max: PRODUCT_STOCK_LIMIT, step: 'any' },
                 }}
               />
               <TextField
@@ -545,7 +545,7 @@ export default function ProductsPage() {
               onChange={(e) => setFormData({ ...formData, lowStockThreshold: e.target.value })}
               helperText={t('products.lowStockHelp')}
               InputProps={{
-                inputProps: { min: 0, max: LOW_STOCK_THRESHOLD_LIMIT - 1, step: 'any' },
+                inputProps: { min: 0, max: LOW_STOCK_THRESHOLD_LIMIT, step: 'any' },
               }}
             />
             <Autocomplete
