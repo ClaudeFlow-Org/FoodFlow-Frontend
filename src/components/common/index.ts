@@ -9,4 +9,5 @@ export { ErrorAlert } from './ErrorAlert';
 export { CloseIconButton } from './CloseIconButton';
 export { DataTable } from './DataTable';
 export { AppControls } from './AppControls';
+export { PasswordVisibilityToggle } from './PasswordVisibilityToggle';
 export type { Column } from './DataTable';

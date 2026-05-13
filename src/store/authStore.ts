@@ -32,6 +32,7 @@ export const useAuthStore = create<AuthState>()(
 
       login: async (credentials: LoginRequest) => {
         set({ isLoading: true, error: null });
+        localStorage.removeItem('token');
         try {
           const { authService } = await import('@/services/authService');
           const response = await authService.login(credentials);
@@ -60,6 +61,7 @@ export const useAuthStore = create<AuthState>()(
 
       register: async (data: RegisterRequest) => {
         set({ isLoading: true, error: null });
+        localStorage.removeItem('token');
         try {
           const { authService } = await import('@/services/authService');
           await authService.register(data);

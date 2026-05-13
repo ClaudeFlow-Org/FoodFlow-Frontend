@@ -18,13 +18,18 @@ const mapUser = (user: BackendUser): User => ({
   subscriptionType: user.subscriptionType || 'FREE',
 });
 
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
 class AuthService {
   private readonly basePath = '/api/auth';
 
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     const response = await api.post<ApiResponse<LoginResponse>>(
       `${this.basePath}/login`,
-      credentials
+      {
+        ...credentials,
+        email: normalizeEmail(credentials.email),
+      }
     );
     return {
       ...response.data.data,
@@ -36,7 +41,11 @@ class AuthService {
   async register(data: RegisterRequest): Promise<User> {
     const response = await api.post<ApiResponse<BackendUser>>(
       `${this.basePath}/register`,
-      data
+      {
+        ...data,
+        name: data.name.trim(),
+        email: normalizeEmail(data.email),
+      }
     );
     return mapUser(response.data.data);
   }
@@ -47,7 +56,11 @@ class AuthService {
   }
 
   async updateProfile(data: UpdateProfileRequest): Promise<User> {
-    const response = await api.put<ApiResponse<BackendUser>>('/api/users/profile', data);
+    const response = await api.put<ApiResponse<BackendUser>>('/api/users/profile', {
+      ...data,
+      name: data.name?.trim(),
+      email: data.email ? normalizeEmail(data.email) : undefined,
+    });
     return mapUser(response.data.data);
   }
 
