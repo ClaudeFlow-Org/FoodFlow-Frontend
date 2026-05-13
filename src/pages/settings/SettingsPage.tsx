@@ -19,7 +19,7 @@ import {
   Paper,
   Grid,
 } from '@mui/material';
-import { PageHeader } from '@/components/common';
+import { PageHeader, PasswordVisibilityToggle } from '@/components/common';
 import { useAuthStore } from '@/store/authStore';
 import { authService, subscriptionService } from '@/services';
 import type { SubscriptionPlan, UserSubscription } from '@/types';
@@ -58,6 +58,11 @@ export default function SettingsPage() {
     newPassword: '',
     confirmPassword: '',
   });
+  const [passwordVisibility, setPasswordVisibility] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [upgradeDialog, setUpgradeDialog] = useState<{ open: boolean; plan: SubscriptionPlan | null }>({
@@ -74,6 +79,12 @@ export default function SettingsPage() {
     return translated === key ? feature : translated;
   };
   const errorMessage = error ? getLocalizedErrorMessage(error, t, 'common.errorOccurred') : null;
+  const togglePasswordVisibility = (field: keyof typeof passwordVisibility) => {
+    setPasswordVisibility((current) => ({
+      ...current,
+      [field]: !current[field],
+    }));
+  };
 
   useEffect(() => {
     if (user) {
@@ -251,30 +262,57 @@ export default function SettingsPage() {
               <Typography variant="h6" sx={{ fontWeight: 800 }}>{t('settings.passwordTitle')}</Typography>
               <TextField
                 label={t('settings.currentPassword')}
-                type="password"
+                type={passwordVisibility.currentPassword ? 'text' : 'password'}
                 fullWidth
                 value={passwordData.currentPassword}
                 onChange={(e) =>
                   setPasswordData({ ...passwordData, currentPassword: e.target.value })
                 }
+                autoComplete="current-password"
+                InputProps={{
+                  endAdornment: (
+                    <PasswordVisibilityToggle
+                      visible={passwordVisibility.currentPassword}
+                      onToggle={() => togglePasswordVisibility('currentPassword')}
+                    />
+                  ),
+                }}
               />
               <TextField
                 label={t('settings.newPassword')}
-                type="password"
+                type={passwordVisibility.newPassword ? 'text' : 'password'}
                 fullWidth
                 value={passwordData.newPassword}
                 onChange={(e) =>
                   setPasswordData({ ...passwordData, newPassword: e.target.value })
                 }
+                autoComplete="new-password"
+                InputProps={{
+                  endAdornment: (
+                    <PasswordVisibilityToggle
+                      visible={passwordVisibility.newPassword}
+                      onToggle={() => togglePasswordVisibility('newPassword')}
+                    />
+                  ),
+                }}
               />
               <TextField
                 label={t('settings.confirmNewPassword')}
-                type="password"
+                type={passwordVisibility.confirmPassword ? 'text' : 'password'}
                 fullWidth
                 value={passwordData.confirmPassword}
                 onChange={(e) =>
                   setPasswordData({ ...passwordData, confirmPassword: e.target.value })
                 }
+                autoComplete="new-password"
+                InputProps={{
+                  endAdornment: (
+                    <PasswordVisibilityToggle
+                      visible={passwordVisibility.confirmPassword}
+                      onToggle={() => togglePasswordVisibility('confirmPassword')}
+                    />
+                  ),
+                }}
               />
               <Button
                 variant="contained"

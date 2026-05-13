@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { useAuthStore } from '@/store/authStore';
 import { useI18n } from '@/i18n';
-import { AppControls } from '@/components/common';
+import { AppControls, PasswordVisibilityToggle } from '@/components/common';
 import { getLocalizedErrorMessage, toErrorMessage, type ErrorMessage } from '@/utils/errorMessages';
 
 const brandLogoSrc = '/foodflow-mark.png';
@@ -33,12 +33,14 @@ export default function RegisterPage() {
   const { register: registerUser, isLoading, error, clearError } = useAuthStore();
   const { language, t } = useI18n();
   const [submitError, setSubmitError] = useState<ErrorMessage | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const registerSchema = useMemo(
     () =>
       z
         .object({
-          name: z.string().min(1, t('auth.validation.nameRequired')).min(2, t('auth.validation.nameMin')),
-          email: z.string().min(1, t('auth.validation.emailRequired')).email(t('auth.validation.emailInvalid')),
+          name: z.string().trim().min(1, t('auth.validation.nameRequired')).min(2, t('auth.validation.nameMin')),
+          email: z.string().trim().min(1, t('auth.validation.emailRequired')).email(t('auth.validation.emailInvalid')),
           password: z
             .string()
             .min(1, t('auth.validation.passwordRequired'))
@@ -85,8 +87,8 @@ export default function RegisterPage() {
 
     try {
       await registerUser({
-        name: data.name,
-        email: data.email,
+        name: data.name.trim(),
+        email: data.email.trim().toLowerCase(),
         password: data.password,
       });
       void navigate('/dashboard');
@@ -169,25 +171,43 @@ export default function RegisterPage() {
             <TextField
               {...register('password')}
               label={t('auth.fields.password')}
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               fullWidth
               margin="normal"
               error={!!errors.password}
               helperText={errors.password?.message}
               disabled={isLoading}
               autoComplete="new-password"
+              InputProps={{
+                endAdornment: (
+                  <PasswordVisibilityToggle
+                    visible={showPassword}
+                    onToggle={() => setShowPassword((current) => !current)}
+                    disabled={isLoading}
+                  />
+                ),
+              }}
             />
 
             <TextField
               {...register('confirmPassword')}
               label={t('auth.fields.confirmPassword')}
-              type="password"
+              type={showConfirmPassword ? 'text' : 'password'}
               fullWidth
               margin="normal"
               error={!!errors.confirmPassword}
               helperText={errors.confirmPassword?.message}
               disabled={isLoading}
               autoComplete="new-password"
+              InputProps={{
+                endAdornment: (
+                  <PasswordVisibilityToggle
+                    visible={showConfirmPassword}
+                    onToggle={() => setShowConfirmPassword((current) => !current)}
+                    disabled={isLoading}
+                  />
+                ),
+              }}
             />
 
             <Button
