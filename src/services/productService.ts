@@ -50,11 +50,15 @@ class ProductService {
 
   async getAll(): Promise<Product[]> {
     const response = await api.get<ApiResponse<BackendProduct[]>>(this.basePath);
-    return response.data.data.map(mapProduct);
+    const items = response.data?.data;
+    return Array.isArray(items) ? items.map(mapProduct) : [];
   }
 
   async getById(id: number): Promise<Product> {
     const response = await api.get<ApiResponse<BackendProduct>>(`${this.basePath}/${id}`);
+    if (!response.data?.data) {
+      throw new Error('Product not found');
+    }
     return mapProduct(response.data.data);
   }
 
@@ -63,6 +67,9 @@ class ProductService {
       this.basePath,
       toProductRequest(data, false)
     );
+    if (!response.data?.data) {
+      throw new Error('Failed to create product');
+    }
     return mapProduct(response.data.data);
   }
 
@@ -71,6 +78,9 @@ class ProductService {
       `${this.basePath}/${id}`,
       toProductRequest(data, false)
     );
+    if (!response.data?.data) {
+      throw new Error('Product not found');
+    }
     return mapProduct(response.data.data);
   }
 
@@ -79,6 +89,9 @@ class ProductService {
       `${this.basePath}/${id}/category`,
       { name }
     );
+    if (!response.data?.data) {
+      throw new Error('Product not found');
+    }
     return mapProduct(response.data.data);
   }
 
@@ -88,16 +101,23 @@ class ProductService {
 
   async getCategories(): Promise<ProductCategory[]> {
     const response = await api.get<ApiResponse<ProductCategory[]>>(`${this.basePath}/categories`);
-    return response.data.data;
+    const items = response.data?.data;
+    return Array.isArray(items) ? items : [];
   }
 
   async createCategory(name: string): Promise<ProductCategory> {
     const response = await api.post<ApiResponse<ProductCategory>>(`${this.basePath}/categories`, { name });
+    if (!response.data?.data) {
+      throw new Error('Failed to create category');
+    }
     return response.data.data;
   }
 
   async updateCategory(id: number, name: string): Promise<ProductCategory> {
     const response = await api.put<ApiResponse<ProductCategory>>(`${this.basePath}/categories/${id}`, { name });
+    if (!response.data?.data) {
+      throw new Error('Category not found');
+    }
     return response.data.data;
   }
 

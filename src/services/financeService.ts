@@ -87,6 +87,9 @@ class FinanceService {
     const response = await api.get<ApiResponse<BackendDashboard>>(`${this.basePath}/dashboard`, {
       params: { period },
     });
+    if (!response.data?.data) {
+      throw new Error('Failed to load dashboard metrics');
+    }
     return mapDashboardMetrics(response.data.data);
   }
 
@@ -94,6 +97,9 @@ class FinanceService {
     const response = await api.get<ApiResponse<BackendFinancialReport>>(`${this.basePath}/reports`, {
       params: { period },
     });
+    if (!response.data?.data) {
+      throw new Error('Failed to load financial report');
+    }
     return mapFinancialReport(response.data.data);
   }
 }

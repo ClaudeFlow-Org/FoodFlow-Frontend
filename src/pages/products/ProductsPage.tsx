@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -21,14 +21,19 @@ import {
   Typography,
 } from '@mui/material';
 import { Add, Edit, Delete, Search, Warning, Category as CategoryIcon } from '@mui/icons-material';
-import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/common';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { PageHeader, ConfirmDialog, DataTable, EmptyState, SnackbarNotice } from '@/components/common';
 import { productService } from '@/services';
 import type { Product, ProductCategory, Column } from '@/types';
 import { Inventory2Outlined } from '@mui/icons-material';
 import { useI18n } from '@/i18n';
+import { createCategorySchema, createProductSchema } from '@/validation/schemas';
+import { useRevalidateOnLanguageChange } from '@/hooks';
 
 export default function ProductsPage() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +41,6 @@ export default function ProductsPage() {
   const [openModal, setOpenModal] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
-  const [categoryForm, setCategoryForm] = useState('');
   const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; product: Product | null }>({
     open: false,
@@ -48,17 +52,53 @@ export default function ProductsPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [categorySubmitError, setCategorySubmitError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    stockLevel: '',
-    unitOfMeasure: '',
-    unitCost: '',
-    lowStockThreshold: '',
-    category: '',
-    supplier: '',
+  const productSchema = useMemo(() => createProductSchema(t), [t]);
+  const categorySchema = useMemo(() => createCategorySchema(t), [t]);
+
+  type ProductFormData = z.infer<ReturnType<typeof createProductSchema>>;
+  type CategoryFormData = z.infer<ReturnType<typeof createCategorySchema>>;
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    trigger,
+    formState: { errors, isSubmitting },
+  } = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      stockLevel: undefined,
+      unitOfMeasure: '',
+      unitCost: undefined,
+      lowStockThreshold: 10,
+      category: '',
+      supplier: '',
+    },
   });
+
+  const {
+    register: registerCategory,
+    handleSubmit: handleCategorySubmit,
+    reset: resetCategory,
+    trigger: triggerCategory,
+    formState: { errors: categoryErrors, isSubmitting: isCategorySubmitting },
+  } = useForm<CategoryFormData>({
+    resolver: zodResolver(categorySchema),
+    defaultValues: {
+      name: '',
+    },
+  });
+
+  useRevalidateOnLanguageChange(trigger, language);
+  useRevalidateOnLanguageChange(triggerCategory, language);
+
+  const [categoryValue, setCategoryValue] = useState('');
 
   useEffect(() => {
     void loadProducts();
@@ -87,31 +127,33 @@ export default function ProductsPage() {
   const handleOpenModal = (product?: Product) => {
     if (product) {
       setEditProduct(product);
-      setFormData({
+      reset({
         name: product.name,
         description: product.description || '',
-        stockLevel: product.stockLevel.toString(),
+        stockLevel: product.stockLevel,
         unitOfMeasure: product.unitOfMeasure,
-        unitCost: product.unitCost.toString(),
-        lowStockThreshold: product.lowStockThreshold.toString(),
+        unitCost: product.unitCost,
+        lowStockThreshold: product.lowStockThreshold,
         category: product.category || '',
         supplier: product.supplier || '',
       });
+      setCategoryValue(product.category || '');
     } else {
       setEditProduct(null);
-      setFormData({
+      reset({
         name: '',
         description: '',
-        stockLevel: '',
+        stockLevel: undefined,
         unitOfMeasure: '',
-        unitCost: '',
-        lowStockThreshold: '10',
+        unitCost: undefined,
+        lowStockThreshold: 10,
         category: '',
         supplier: '',
       });
+      setCategoryValue('');
     }
     setOpenModal(true);
-    setError(null);
+    setSubmitError(null);
   };
 
   const handleCloseModal = () => {
@@ -120,12 +162,13 @@ export default function ProductsPage() {
   };
 
   const resetCategoryForm = () => {
-    setCategoryForm('');
     setEditingCategory(null);
+    resetCategory({ name: '' });
   };
 
   const handleOpenCategoryDialog = () => {
     setCategoryError(null);
+    setCategorySubmitError(null);
     resetCategoryForm();
     setCategoryDialogOpen(true);
   };
@@ -133,47 +176,46 @@ export default function ProductsPage() {
   const handleCloseCategoryDialog = () => {
     setCategoryDialogOpen(false);
     setCategoryError(null);
+    setCategorySubmitError(null);
     resetCategoryForm();
   };
 
-  const handleSaveCategory = async () => {
-    const name = categoryForm.trim();
-    if (!name) {
-      setCategoryError(t('products.categoryNameRequired'));
-      return;
-    }
-
+  const onSaveCategory = handleCategorySubmit(async (data) => {
+    const name = data.name.trim();
     try {
-      setCategoryError(null);
+      setCategorySubmitError(null);
       if (editingCategory) {
         await productService.updateCategory(editingCategory.id, name);
+        setSuccessMessage(t('notifications.category.updated'));
       } else {
         await productService.createCategory(name);
+        setSuccessMessage(t('notifications.category.created'));
       }
       resetCategoryForm();
       void loadProducts(false);
     } catch (err) {
-      setCategoryError(err instanceof Error ? err.message : t('products.categorySaveError'));
+      setCategorySubmitError(err instanceof Error ? err.message : t('products.categorySaveError'));
     }
-  };
+  });
 
   const handleEditCategory = (category: ProductCategory) => {
     setEditingCategory(category);
-    setCategoryForm(category.name);
+    resetCategory({ name: category.name });
     setCategoryError(null);
+    setCategorySubmitError(null);
   };
 
-  const handleSubmit = async () => {
+  const onSubmit = handleSubmit(async (data) => {
     try {
-      const selectedCategory = formData.category.trim();
+      const selectedCategory = categoryValue.trim();
       const payload = {
-        name: formData.name,
-        description: formData.description || undefined,
-        stockLevel: parseFloat(formData.stockLevel),
-        unitOfMeasure: formData.unitOfMeasure,
-        unitCost: parseFloat(formData.unitCost),
-        lowStockThreshold: parseFloat(formData.lowStockThreshold),
-        supplier: formData.supplier || undefined,
+        name: data.name,
+        description: data.description || undefined,
+        stockLevel: data.stockLevel,
+        unitOfMeasure: data.unitOfMeasure,
+        unitCost: data.unitCost,
+        lowStockThreshold: data.lowStockThreshold,
+        supplier: data.supplier || undefined,
       };
 
       let savedProduct: Product;
@@ -185,25 +227,28 @@ export default function ProductsPage() {
             product.id === savedProduct.id ? savedProduct : product
           )
         );
+        setSuccessMessage(t('notifications.products.updated'));
       } else {
         savedProduct = await productService.create(payload);
         if (selectedCategory) {
           savedProduct = await productService.updateProductCategory(savedProduct.id, selectedCategory);
         }
         setProducts((currentProducts) => [savedProduct, ...currentProducts]);
+        setSuccessMessage(t('notifications.products.created'));
       }
 
       handleCloseModal();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('products.saveError'));
+      setSubmitError(err instanceof Error ? err.message : t('products.saveError'));
     }
-  };
+  });
 
   const handleDelete = async () => {
     if (deleteConfirm.product) {
       try {
         await productService.delete(deleteConfirm.product.id);
         setDeleteConfirm({ open: false, product: null });
+        setSuccessMessage(t('notifications.products.deleted'));
         void loadProducts();
       } catch (err) {
         setError(err instanceof Error ? err.message : t('products.deleteError'));
@@ -215,11 +260,12 @@ export default function ProductsPage() {
     if (deleteCategoryConfirm.category) {
       try {
         await productService.deleteCategory(deleteCategoryConfirm.category.id);
-        if (formData.category === deleteCategoryConfirm.category.name) {
-          setFormData({ ...formData, category: '' });
+        if (categoryValue === deleteCategoryConfirm.category.name) {
+          setCategoryValue('');
         }
         setDeleteCategoryConfirm({ open: false, category: null });
         resetCategoryForm();
+        setSuccessMessage(t('notifications.category.deleted'));
         void loadProducts(false);
       } catch (err) {
         setCategoryError(err instanceof Error ? err.message : t('products.categoryDeleteError'));
@@ -386,70 +432,82 @@ export default function ProductsPage() {
         <DialogTitle>{editProduct ? t('products.editTitle') : t('products.addTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            {error && <Alert severity="error">{error}</Alert>}
+            {submitError && <Alert severity="error">{submitError}</Alert>}
             <TextField
+              {...register('name')}
               label={t('products.name')}
               fullWidth
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
+              error={!!errors.name}
+              helperText={errors.name?.message}
             />
             <TextField
+              {...register('description')}
               label={t('products.description')}
               fullWidth
               multiline
               rows={2}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              error={!!errors.description}
+              helperText={errors.description?.message}
             />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
+                {...register('stockLevel', { valueAsNumber: true })}
                 label={t('products.stockLevel')}
                 type="number"
                 fullWidth
-                value={formData.stockLevel}
-                onChange={(e) => setFormData({ ...formData, stockLevel: e.target.value })}
-                required
+                error={!!errors.stockLevel}
+                helperText={errors.stockLevel?.message}
+                inputProps={{ min: 0, max: 9999999.999, step: 0.001 }}
               />
               <TextField
+                {...register('unitOfMeasure')}
                 label={t('products.unitOfMeasure')}
                 fullWidth
-                value={formData.unitOfMeasure}
-                onChange={(e) => setFormData({ ...formData, unitOfMeasure: e.target.value })}
                 placeholder={t('products.unitOfMeasurePlaceholder')}
-                required
+                error={!!errors.unitOfMeasure}
+                helperText={errors.unitOfMeasure?.message}
               />
             </Stack>
             <TextField
+              {...register('unitCost', { valueAsNumber: true })}
               label={t('products.unitCost')}
               type="number"
               fullWidth
-              value={formData.unitCost}
-              onChange={(e) => setFormData({ ...formData, unitCost: e.target.value })}
-              required
+              error={!!errors.unitCost}
+              helperText={errors.unitCost?.message}
+              inputProps={{ min: 0.01, max: 99999999.99, step: 0.01 }}
               InputProps={{
                 startAdornment: <InputAdornment position="start">$</InputAdornment>,
               }}
             />
             <TextField
+              {...register('lowStockThreshold', { valueAsNumber: true })}
               label={t('products.lowStockThreshold')}
               type="number"
               fullWidth
-              value={formData.lowStockThreshold}
-              onChange={(e) => setFormData({ ...formData, lowStockThreshold: e.target.value })}
-              helperText={t('products.lowStockHelp')}
+              helperText={errors.lowStockThreshold?.message || t('products.lowStockHelp')}
+              error={!!errors.lowStockThreshold}
+              inputProps={{ min: 0, max: 99999999.99, step: 0.01 }}
             />
             <Autocomplete
               freeSolo
               options={categoryOptions}
-              value={formData.category}
-              onChange={(_event, value) => setFormData({ ...formData, category: value || '' })}
-              onInputChange={(_event, value) => setFormData({ ...formData, category: value })}
+              value={categoryValue}
+              onChange={(_event, value) => {
+                setCategoryValue(value || '');
+                reset((current) => ({ ...current, category: value || '' }));
+              }}
+              onInputChange={(_event, value) => {
+                setCategoryValue(value);
+                reset((current) => ({ ...current, category: value }));
+              }}
               renderInput={(params) => (
                 <TextField
                   {...params}
                   label={t('products.category')}
                   placeholder={t('products.categoryPlaceholder')}
+                  error={!!errors.category}
+                  helperText={errors.category?.message}
                 />
               )}
             />
@@ -472,8 +530,12 @@ export default function ProductsPage() {
               </Stack>
               <ToggleButtonGroup
                 exclusive
-                value={formData.category || ''}
-                onChange={(_event, value) => setFormData({ ...formData, category: value || '' })}
+                value={categoryValue || ''}
+                onChange={(_event, value) => {
+                  const nextValue = value || '';
+                  setCategoryValue(nextValue);
+                  reset((current) => ({ ...current, category: nextValue }));
+                }}
                 sx={{
                   display: 'flex',
                   flexWrap: 'wrap',
@@ -512,16 +574,17 @@ export default function ProductsPage() {
               )}
             </Box>
             <TextField
+              {...register('supplier')}
               label={t('products.supplier')}
               fullWidth
-              value={formData.supplier}
-              onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+              error={!!errors.supplier}
+              helperText={errors.supplier?.message}
             />
           </Stack>
         </DialogContent>
         <DialogActions sx={{ gap: 1 }}>
           <Button onClick={handleCloseModal}>{t('common.cancel')}</Button>
-          <Button onClick={() => void handleSubmit()} variant="contained">
+          <Button onClick={() => void onSubmit()} variant="contained" disabled={isSubmitting}>
             {editProduct ? t('common.update') : t('common.create')}
           </Button>
         </DialogActions>
@@ -532,15 +595,22 @@ export default function ProductsPage() {
         <DialogContent>
           <Stack spacing={2.25} sx={{ mt: 1 }}>
             {categoryError && <Alert severity="error">{categoryError}</Alert>}
+            {categorySubmitError && <Alert severity="error">{categorySubmitError}</Alert>}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
               <TextField
+                {...registerCategory('name')}
                 label={editingCategory ? t('products.renameCategory') : t('products.newCategory')}
                 fullWidth
-                value={categoryForm}
-                onChange={(e) => setCategoryForm(e.target.value)}
                 placeholder={t('products.categoryPlaceholder')}
+                error={!!categoryErrors.name}
+                helperText={categoryErrors.name?.message}
               />
-              <Button variant="contained" onClick={() => void handleSaveCategory()} sx={{ whiteSpace: 'nowrap' }}>
+              <Button
+                variant="contained"
+                onClick={() => void onSaveCategory()}
+                sx={{ whiteSpace: 'nowrap' }}
+                disabled={isCategorySubmitting}
+              >
                 {editingCategory ? t('common.update') : t('common.create')}
               </Button>
               {editingCategory && (
@@ -606,6 +676,12 @@ export default function ProductsPage() {
         message={t('products.deleteCategoryMessage', { name: deleteCategoryConfirm.category?.name || '' })}
         onConfirm={() => void handleDeleteCategory()}
         onCancel={() => setDeleteCategoryConfirm({ open: false, category: null })}
+      />
+
+      <SnackbarNotice
+        open={Boolean(successMessage)}
+        message={successMessage}
+        onClose={() => setSuccessMessage('')}
       />
     </Box>
   );

@@ -17,43 +17,24 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { useI18n } from '@/i18n';
 import { AppControls } from '@/components/common';
+import { createRegisterSchema } from '@/validation/schemas';
+import { useRevalidateOnLanguageChange } from '@/hooks';
 
 const brandLogoSrc = '/foodflow-mark.png';
 
-type RegisterFormData = {
-  name: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-};
+type RegisterFormData = z.infer<ReturnType<typeof createRegisterSchema>>;
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { register: registerUser, isLoading, error, clearError } = useAuthStore();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const registerSchema = useMemo(
-    () =>
-      z
-        .object({
-          name: z.string().min(1, t('auth.validation.nameRequired')).min(2, t('auth.validation.nameMin')),
-          email: z.string().min(1, t('auth.validation.emailRequired')).email(t('auth.validation.emailInvalid')),
-          password: z
-            .string()
-            .min(1, t('auth.validation.passwordRequired'))
-            .min(6, t('auth.validation.passwordMin')),
-          confirmPassword: z.string().min(1, t('auth.validation.confirmRequired')),
-        })
-        .refine((data) => data.password === data.confirmPassword, {
-          message: t('auth.validation.passwordsMatch'),
-          path: ['confirmPassword'],
-        }),
-    [t]
-  );
+  const registerSchema = useMemo(() => createRegisterSchema(t), [t]);
 
   const {
     register,
     handleSubmit,
+    trigger,
     formState: { errors },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -64,6 +45,8 @@ export default function RegisterPage() {
       confirmPassword: '',
     },
   });
+
+  useRevalidateOnLanguageChange(trigger, language);
 
   const onSubmit = async (data: RegisterFormData) => {
     setSubmitError(null);

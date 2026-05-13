@@ -5,3 +5,4 @@ export { useProducts } from './useProducts';
 export { useOrders } from './useOrders';
 export { useFinance } from './useFinance';
 export { useSubscription } from './useSubscription';
+export { useRevalidateOnLanguageChange } from './useRevalidateOnLanguageChange';
