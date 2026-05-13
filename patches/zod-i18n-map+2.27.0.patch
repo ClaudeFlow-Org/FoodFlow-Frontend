@@ -1,0 +1,11 @@
+diff --git a/node_modules/zod-i18n-map/dist/index.mjs b/node_modules/zod-i18n-map/dist/index.mjs
+index d1d912b..0421699 100644
+--- a/node_modules/zod-i18n-map/dist/index.mjs
++++ b/node_modules/zod-i18n-map/dist/index.mjs
+@@ -1,5 +1,5 @@
+ // src/index.ts
+-import { ZodIssueCode, ZodParsedType, defaultErrorMap } from "zod";
++import { ZodIssueCode, ZodParsedType, defaultErrorMap } from "zod/v3";
+ import i18next from "i18next";
+ var jsonStringifyReplacer = (_, value) => {
+   if (typeof value === "bigint") {

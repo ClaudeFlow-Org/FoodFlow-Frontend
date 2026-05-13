@@ -31,21 +31,31 @@ class DishService {
 
   async getAll(): Promise<Dish[]> {
     const response = await api.get<ApiResponse<BackendDish[]>>(this.basePath);
-    return response.data.data.map(mapDish);
+    const items = response.data?.data;
+    return Array.isArray(items) ? items.map(mapDish) : [];
   }
 
   async getById(id: number): Promise<Dish> {
     const response = await api.get<ApiResponse<BackendDish>>(`${this.basePath}/${id}`);
+    if (!response.data?.data) {
+      throw new Error('Dish not found');
+    }
     return mapDish(response.data.data);
   }
 
   async create(data: CreateDishRequest): Promise<Dish> {
     const response = await api.post<ApiResponse<BackendDish>>(this.basePath, data);
+    if (!response.data?.data) {
+      throw new Error('Failed to create dish');
+    }
     return mapDish(response.data.data);
   }
 
   async update(id: number, data: UpdateDishRequest): Promise<Dish> {
     const response = await api.put<ApiResponse<BackendDish>>(`${this.basePath}/${id}`, data);
+    if (!response.data?.data) {
+      throw new Error('Dish not found');
+    }
     return mapDish(response.data.data);
   }
 

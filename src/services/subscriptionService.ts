@@ -77,12 +77,16 @@ class SubscriptionService {
 
   async getPlans(): Promise<SubscriptionPlan[]> {
     const response = await api.get<ApiResponse<BackendSubscriptionPlan[]>>(`${this.basePath}/plans`);
-    return response.data.data.map(mapPlan);
+    const items = response.data?.data;
+    return Array.isArray(items) ? items.map(mapPlan) : [];
   }
 
   async getCurrentSubscription(): Promise<UserSubscription | null> {
     try {
       const response = await api.get<ApiResponse<BackendSubscription>>(`${this.basePath}/current`);
+      if (!response.data?.data) {
+        return null;
+      }
       const type = toSubscriptionType(response.data.data.plan);
       return {
         id: response.data.data.id,
@@ -114,6 +118,9 @@ class SubscriptionService {
       `${this.basePath}/subscribe`,
       data
     );
+    if (!response.data?.data) {
+      throw new Error('Failed to subscribe');
+    }
     const type = toSubscriptionType(response.data.data.plan);
     return {
       id: response.data.data.id,

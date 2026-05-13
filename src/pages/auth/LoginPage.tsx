@@ -17,34 +17,24 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { useI18n } from '@/i18n';
 import { AppControls } from '@/components/common';
+import { createLoginSchema } from '@/validation/schemas';
+import { useRevalidateOnLanguageChange } from '@/hooks';
 
 const brandLogoSrc = '/foodflow-mark.png';
 
-type LoginFormData = {
-  email: string;
-  password: string;
-};
+type LoginFormData = z.infer<ReturnType<typeof createLoginSchema>>;
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuthStore();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const loginSchema = useMemo(
-    () =>
-      z.object({
-        email: z.string().min(1, t('auth.validation.emailRequired')).email(t('auth.validation.emailInvalid')),
-        password: z
-          .string()
-          .min(1, t('auth.validation.passwordRequired'))
-          .min(6, t('auth.validation.passwordMin')),
-      }),
-    [t]
-  );
+  const loginSchema = useMemo(() => createLoginSchema(t), [t]);
 
   const {
     register,
     handleSubmit,
+    trigger,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -53,6 +43,8 @@ export default function LoginPage() {
       password: '',
     },
   });
+
+  useRevalidateOnLanguageChange(trigger, language);
 
   const onSubmit = async (data: LoginFormData) => {
     setSubmitError(null);

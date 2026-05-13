@@ -65,11 +65,15 @@ class OrderService {
 
   async getAll(): Promise<Order[]> {
     const response = await api.get<ApiResponse<BackendOrder[]>>(this.basePath);
-    return response.data.data.map(mapOrder);
+    const items = response.data?.data;
+    return Array.isArray(items) ? items.map(mapOrder) : [];
   }
 
   async getById(id: number): Promise<Order> {
     const response = await api.get<ApiResponse<BackendOrder>>(`${this.basePath}/${id}`);
+    if (!response.data?.data) {
+      throw new Error('Order not found');
+    }
     return mapOrder(response.data.data);
   }
 
@@ -83,6 +87,9 @@ class OrderService {
         quantity: item.quantity,
       })),
     });
+    if (!response.data?.data) {
+      throw new Error('Failed to create order');
+    }
     return mapOrder(response.data.data);
   }
 
@@ -92,16 +99,25 @@ class OrderService {
 
   async advanceStatus(id: number): Promise<Order> {
     const response = await api.put<ApiResponse<BackendOrder>>(`${this.basePath}/${id}/advance`);
+    if (!response.data?.data) {
+      throw new Error('Order not found');
+    }
     return mapOrder(response.data.data);
   }
 
   async cancelStatus(id: number): Promise<Order> {
     const response = await api.put<ApiResponse<BackendOrder>>(`${this.basePath}/${id}/cancel`);
+    if (!response.data?.data) {
+      throw new Error('Order not found');
+    }
     return mapOrder(response.data.data);
   }
 
   async updateStatus(id: number, status: OrderStatus): Promise<Order> {
     const response = await api.put<ApiResponse<BackendOrder>>(`${this.basePath}/${id}/status?status=${status}`);
+    if (!response.data?.data) {
+      throw new Error('Order not found');
+    }
     return mapOrder(response.data.data);
   }
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -19,13 +19,18 @@ import {
   Paper,
   Grid,
 } from '@mui/material';
-import { PageHeader } from '@/components/common';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { PageHeader, SnackbarNotice } from '@/components/common';
 import { useAuthStore } from '@/store/authStore';
 import { authService, subscriptionService } from '@/services';
 import type { SubscriptionPlan, UserSubscription } from '@/types';
 import { CheckCircle, Star } from '@mui/icons-material';
 import { useI18n } from '@/i18n';
 import { formatCurrency } from '@/utils';
+import { createPasswordSchema, createProfileSchema } from '@/validation/schemas';
+import { useRevalidateOnLanguageChange } from '@/hooks';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -43,15 +48,9 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 
 export default function SettingsPage() {
   const { user, updateProfile, refreshUserProfile } = useAuthStore();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
-  const [profileData, setProfileData] = useState({ name: '', email: '' });
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [upgradeDialog, setUpgradeDialog] = useState<{ open: boolean; plan: SubscriptionPlan | null }>({
@@ -60,6 +59,44 @@ export default function SettingsPage() {
   });
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+
+  const profileSchema = useMemo(() => createProfileSchema(t), [t]);
+  const passwordSchema = useMemo(() => createPasswordSchema(t), [t]);
+
+  type ProfileFormData = z.infer<ReturnType<typeof createProfileSchema>>;
+  type PasswordFormData = z.infer<ReturnType<typeof createPasswordSchema>>;
+
+  const {
+    register: registerProfile,
+    handleSubmit: handleProfileSubmit,
+    reset: resetProfile,
+    trigger: triggerProfile,
+    formState: { errors: profileErrors, isSubmitting: isProfileSubmitting },
+  } = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+    },
+  });
+
+  const {
+    register: registerPassword,
+    handleSubmit: handlePasswordSubmit,
+    reset: resetPassword,
+    trigger: triggerPassword,
+    formState: { errors: passwordErrors, isSubmitting: isPasswordSubmitting },
+  } = useForm<PasswordFormData>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    },
+  });
+
+  useRevalidateOnLanguageChange(triggerProfile, language);
+  useRevalidateOnLanguageChange(triggerPassword, language);
 
   const getPlanName = (plan: SubscriptionPlan) => t(`plans.${plan.type}.name`);
   const getPlanFeature = (plan: SubscriptionPlan, feature: string, index: number) => {
@@ -70,10 +107,10 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (user) {
-      setProfileData({ name: user.name, email: user.email });
+      resetProfile({ name: user.name, email: user.email });
     }
     void loadSubscriptionData();
-  }, [user]);
+  }, [user, resetProfile]);
 
   const loadSubscriptionData = async () => {
     try {
@@ -93,49 +130,41 @@ export default function SettingsPage() {
     }
   };
 
-  const handleProfileUpdate = async () => {
+  const onProfileSubmit = handleProfileSubmit(async (data) => {
     try {
-      const emailChanged = user?.email !== profileData.email;
-      await updateProfile({ name: profileData.name, email: profileData.email });
+      const emailChanged = user?.email !== data.email;
+      await updateProfile({ name: data.name, email: data.email });
       setError('');
 
       if (emailChanged) {
-        setSuccess(t('settings.profileUpdated') + '. ' + t('settings.emailChangedRedirect'));
+        setSuccess(`${t('notifications.profile.updated')}. ${t('settings.emailChangedRedirect')}`);
         setTimeout(() => {
-          // Logout and redirect to login
           useAuthStore.getState().logout();
           navigate('/login');
         }, 3000);
       } else {
-        setSuccess(t('settings.profileUpdated'));
-        setTimeout(() => setSuccess(''), 3000);
+        setSuccess(t('notifications.profile.updated'));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('settings.profileUpdateError'));
       setSuccess('');
     }
-  };
+  });
 
-  const handlePasswordChange = async () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError(t('settings.passwordMismatch'));
-      return;
-    }
-
+  const onPasswordSubmit = handlePasswordSubmit(async (data) => {
     try {
       await authService.updatePassword({
-        currentPassword: passwordData.currentPassword,
-        newPassword: passwordData.newPassword,
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
       });
-      setSuccess(t('settings.passwordChanged'));
+      setSuccess(t('notifications.password.updated'));
       setError('');
-      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      setTimeout(() => setSuccess(''), 3000);
+      resetPassword({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
       setError(err instanceof Error ? err.message : t('settings.passwordChangeError'));
       setSuccess('');
     }
-  };
+  });
 
   const handleSubscribe = async () => {
     if (upgradeDialog.plan) {
@@ -156,12 +185,6 @@ export default function SettingsPage() {
   return (
     <Box>
       <PageHeader title={t('settings.title')} subtitle={t('settings.subtitle')} />
-
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
-          {success}
-        </Alert>
-      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
@@ -189,17 +212,19 @@ export default function SettingsPage() {
             <Stack spacing={3}>
               <Typography variant="h6" sx={{ fontWeight: 800 }}>{t('settings.profileInfo')}</Typography>
               <TextField
+                {...registerProfile('name')}
                 label={t('settings.name')}
                 fullWidth
-                value={profileData.name}
-                onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                error={!!profileErrors.name}
+                helperText={profileErrors.name?.message}
               />
               <TextField
+                {...registerProfile('email')}
                 label={t('settings.email')}
                 type="email"
                 fullWidth
-                value={profileData.email}
-                onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                error={!!profileErrors.email}
+                helperText={profileErrors.email?.message}
               />
               <TextField
                 label={t('settings.subscription')}
@@ -219,8 +244,8 @@ export default function SettingsPage() {
               />
               <Button
                 variant="contained"
-                onClick={() => void handleProfileUpdate()}
-                disabled={!profileData.name || !profileData.email}
+                onClick={() => void onProfileSubmit()}
+                disabled={isProfileSubmitting}
               >
                 {t('common.saveChanges')}
               </Button>
@@ -236,40 +261,33 @@ export default function SettingsPage() {
             <Stack spacing={3}>
               <Typography variant="h6" sx={{ fontWeight: 800 }}>{t('settings.passwordTitle')}</Typography>
               <TextField
+                {...registerPassword('currentPassword')}
                 label={t('settings.currentPassword')}
                 type="password"
                 fullWidth
-                value={passwordData.currentPassword}
-                onChange={(e) =>
-                  setPasswordData({ ...passwordData, currentPassword: e.target.value })
-                }
+                error={!!passwordErrors.currentPassword}
+                helperText={passwordErrors.currentPassword?.message}
               />
               <TextField
+                {...registerPassword('newPassword')}
                 label={t('settings.newPassword')}
                 type="password"
                 fullWidth
-                value={passwordData.newPassword}
-                onChange={(e) =>
-                  setPasswordData({ ...passwordData, newPassword: e.target.value })
-                }
+                error={!!passwordErrors.newPassword}
+                helperText={passwordErrors.newPassword?.message}
               />
               <TextField
+                {...registerPassword('confirmPassword')}
                 label={t('settings.confirmNewPassword')}
                 type="password"
                 fullWidth
-                value={passwordData.confirmPassword}
-                onChange={(e) =>
-                  setPasswordData({ ...passwordData, confirmPassword: e.target.value })
-                }
+                error={!!passwordErrors.confirmPassword}
+                helperText={passwordErrors.confirmPassword?.message}
               />
               <Button
                 variant="contained"
-                onClick={() => void handlePasswordChange()}
-                disabled={
-                  !passwordData.currentPassword ||
-                  !passwordData.newPassword ||
-                  !passwordData.confirmPassword
-                }
+                onClick={() => void onPasswordSubmit()}
+                disabled={isPasswordSubmitting}
               >
                 {t('common.changePassword')}
               </Button>
@@ -378,6 +396,12 @@ export default function SettingsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <SnackbarNotice
+        open={Boolean(success)}
+        message={success}
+        onClose={() => setSuccess('')}
+      />
     </Box>
   );
 }

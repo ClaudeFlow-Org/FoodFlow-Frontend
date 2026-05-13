@@ -1,0 +1,169 @@
+{
+  "validation": {
+    "auth": {
+      "name": {
+        "required": "El nombre es obligatorio",
+        "min": "El nombre debe tener al menos {min} caracteres",
+        "max": "El nombre debe tener como máximo {max} caracteres"
+      },
+      "email": {
+        "required": "El correo es obligatorio",
+        "invalid": "Ingresa un correo válido",
+        "max": "El correo debe tener como máximo {max} caracteres"
+      },
+      "password": {
+        "required": "La contraseña es obligatoria",
+        "min": "La contraseña debe tener al menos {min} caracteres",
+        "max": "La contraseña debe tener como máximo {max} caracteres"
+      },
+      "confirmPassword": {
+        "required": "Confirma tu contraseña",
+        "match": "Las contraseñas no coinciden"
+      }
+    },
+    "dish": {
+      "name": {
+        "required": "El nombre del plato es obligatorio",
+        "min": "El nombre del plato debe tener al menos {min} caracteres",
+        "max": "El nombre del plato debe tener como máximo {max} caracteres"
+      },
+      "description": {
+        "max": "La descripción debe tener como máximo {max} caracteres"
+      },
+      "price": {
+        "required": "El precio es obligatorio",
+        "invalid": "El precio debe ser un número",
+        "min": "El precio debe ser al menos {min}",
+        "max": "El precio debe ser como máximo {max}"
+      },
+      "ingredients": {
+        "max": "Los ingredientes deben tener como máximo {max} caracteres"
+      }
+    },
+    "product": {
+      "name": {
+        "required": "El nombre del producto es obligatorio",
+        "min": "El nombre del producto debe tener al menos {min} caracteres",
+        "max": "El nombre del producto debe tener como máximo {max} caracteres"
+      },
+      "description": {
+        "max": "La descripción debe tener como máximo {max} caracteres"
+      },
+      "stockLevel": {
+        "required": "El nivel de stock es obligatorio",
+        "invalid": "El nivel de stock debe ser un número",
+        "min": "El nivel de stock debe ser al menos {min}",
+        "max": "El nivel de stock debe ser como máximo {max}"
+      },
+      "unitOfMeasure": {
+        "required": "La unidad de medida es obligatoria",
+        "max": "La unidad de medida debe tener como máximo {max} caracteres"
+      },
+      "unitCost": {
+        "required": "El costo unitario es obligatorio",
+        "invalid": "El costo unitario debe ser un número",
+        "min": "El costo unitario debe ser al menos {min}",
+        "max": "El costo unitario debe ser como máximo {max}"
+      },
+      "lowStockThreshold": {
+        "invalid": "El umbral de stock bajo debe ser un número",
+        "min": "El umbral de stock bajo debe ser al menos {min}",
+        "max": "El umbral de stock bajo debe ser como máximo {max}"
+      },
+      "category": {
+        "max": "La categoría debe tener como máximo {max} caracteres"
+      },
+      "supplier": {
+        "max": "El proveedor debe tener como máximo {max} caracteres"
+      }
+    },
+    "order": {
+      "tableIdentifier": {
+        "required": "El identificador de mesa es obligatorio",
+        "max": "El identificador de mesa debe tener como máximo {max} caracteres"
+      },
+      "lineItems": {
+        "min": "Agrega al menos un ítem a la orden"
+      },
+      "item": {
+        "dishId": {
+          "required": "El plato es obligatorio",
+          "invalid": "Debes seleccionar un plato",
+          "min": "Debes seleccionar un plato",
+          "max": "Debes seleccionar un plato"
+        },
+        "unitPrice": {
+          "required": "El precio unitario es obligatorio",
+          "invalid": "El precio unitario debe ser un número",
+          "min": "El precio unitario debe ser al menos {min}",
+          "max": "El precio unitario debe ser como máximo {max}"
+        },
+        "quantity": {
+          "required": "La cantidad es obligatoria",
+          "invalid": "La cantidad debe ser un número",
+          "integer": "La cantidad debe ser un número entero",
+          "min": "La cantidad debe ser al menos {min}",
+          "max": "La cantidad debe ser como máximo {max}"
+        }
+      }
+    },
+    "settings": {
+      "name": {
+        "required": "El nombre es obligatorio",
+        "min": "El nombre debe tener al menos {min} caracteres",
+        "max": "El nombre debe tener como máximo {max} caracteres"
+      },
+      "email": {
+        "required": "El correo es obligatorio",
+        "invalid": "Ingresa un correo válido",
+        "max": "El correo debe tener como máximo {max} caracteres"
+      },
+      "currentPassword": {
+        "required": "La contraseña actual es obligatoria"
+      },
+      "newPassword": {
+        "required": "La nueva contraseña es obligatoria",
+        "min": "La nueva contraseña debe tener al menos {min} caracteres",
+        "max": "La nueva contraseña debe tener como máximo {max} caracteres"
+      },
+      "confirmPassword": {
+        "required": "Confirma tu nueva contraseña",
+        "match": "Las nuevas contraseñas no coinciden"
+      }
+    },
+    "category": {
+      "name": {
+        "required": "El nombre de la categoría es obligatorio",
+        "max": "El nombre de la categoría debe tener como máximo {max} caracteres"
+      }
+    }
+  },
+  "notifications": {
+    "dishes": {
+      "created": "Plato creado exitosamente",
+      "updated": "Plato actualizado exitosamente",
+      "deleted": "Plato eliminado exitosamente"
+    },
+    "products": {
+      "created": "Producto creado exitosamente",
+      "updated": "Producto actualizado exitosamente",
+      "deleted": "Producto eliminado exitosamente"
+    },
+    "orders": {
+      "created": "Orden creada exitosamente",
+      "deleted": "Orden eliminada exitosamente",
+      "statusUpdated": "Estado de orden actualizado"
+    },
+    "profile": {
+      "updated": "Perfil actualizado exitosamente"
+    },
+    "password": {
+      "updated": "Contraseña actualizada exitosamente"
+    },
+    "category": {
+      "created": "Categoría creada exitosamente",
+      "updated": "Categoría actualizada exitosamente",
+      "deleted": "Categoría eliminada exitosamente"
+    }
+  }
+}

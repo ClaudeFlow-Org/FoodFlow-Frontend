@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -19,11 +19,16 @@ import {
   Typography,
 } from '@mui/material';
 import { Add, Delete, Remove, AddCircle, CheckCircle, Cancel } from '@mui/icons-material';
-import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/common';
+import { useFieldArray, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { PageHeader, ConfirmDialog, DataTable, EmptyState, SnackbarNotice } from '@/components/common';
 import { orderService, dishService } from '@/services';
-import type { Order, Dish, CreateLineItemRequest, OrderType, OrderStatus, Column } from '@/types';
+import type { Order, Dish, OrderType, OrderStatus, Column } from '@/types';
 import { Receipt } from '@mui/icons-material';
 import { useI18n } from '@/i18n';
+import { createOrderSchema } from '@/validation/schemas';
+import { useRevalidateOnLanguageChange } from '@/hooks';
 
 const orderTypes: OrderType[] = ['DINE_IN', 'TAKEAWAY', 'DELIVERY'];
 
@@ -33,16 +38,11 @@ const statusColors: Record<OrderStatus, 'success' | 'info' | 'warning' | 'error'
   CANCELADA: 'error',
 };
 
-interface LineItemForm extends CreateLineItemRequest {
-  dishName: string;
-  unitPrice: number;
-}
-
 // Helper to get first dish ID or 0 if no dishes
-const getInitialDishId = (dishes: Dish[]) => dishes.length > 0 ? dishes[0].id : 0;
+const getInitialDishId = (dishes: Dish[]) => (dishes.length > 0 ? dishes[0].id : 0);
 
 export default function OrdersPage() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [orders, setOrders] = useState<Order[]>([]);
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,16 +52,44 @@ export default function OrdersPage() {
     order: null,
   });
   const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const [formData, setFormData] = useState({
-    tableIdentifier: '',
+  const orderSchema = useMemo(() => createOrderSchema(t), [t]);
+  type OrderFormData = z.infer<ReturnType<typeof createOrderSchema>>;
+
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    trigger,
+    formState: { errors, isSubmitting },
+  } = useForm<OrderFormData>({
+    resolver: zodResolver(orderSchema),
+    defaultValues: {
+      tableIdentifier: '',
+      lineItems: [],
+    },
   });
 
-  const [lineItems, setLineItems] = useState<LineItemForm[]>([]);
+  useRevalidateOnLanguageChange(trigger, language);
+
+  const { fields, append, remove, replace } = useFieldArray({
+    control,
+    name: 'lineItems',
+  });
 
   useEffect(() => {
     void loadData();
   }, []);
+
+  useEffect(() => {
+    if (openModal && fields.length === 0) {
+      addLineItem();
+    }
+  }, [openModal, fields.length]);
 
   const loadData = async () => {
     try {
@@ -80,85 +108,67 @@ export default function OrdersPage() {
   };
 
   const handleOpenModal = () => {
-    setFormData({
+    reset({
       tableIdentifier: '',
+      lineItems: [],
     });
-    setLineItems([]);
     setOpenModal(true);
-    setError(null);
+    setSubmitError(null);
   };
 
   const handleCloseModal = () => {
     setOpenModal(false);
-    setLineItems([]);
+    replace([]);
   };
 
   const addLineItem = () => {
     const initialDishId = getInitialDishId(dishes);
-    const initialDish = dishes.find(d => d.id === initialDishId);
-    setLineItems([...lineItems, {
+    const initialDish = dishes.find((d) => d.id === initialDishId);
+    append({
       dishId: initialDishId,
+      unitPrice: initialDish?.price || 0,
       quantity: 1,
-      dishName: initialDish?.name || '',
-      unitPrice: initialDish?.price || 0
-    }]);
+    });
   };
 
-  const updateLineItem = (index: number, field: keyof LineItemForm, value: string | number) => {
-    const updated = [...lineItems];
-    if (field === 'dishId') {
-      const dish = dishes.find((d) => d.id === value);
-      if (dish) {
-        updated[index] = {
-          ...updated[index],
-          dishId: dish.id,
-          dishName: dish.name,
-          unitPrice: dish.price,
-        };
-      }
-    } else {
-      updated[index] = { ...updated[index], [field]: value };
+  const updateLineItemDish = (index: number, dishId: number) => {
+    const dish = dishes.find((d) => d.id === dishId);
+    if (dish) {
+      setValue(`lineItems.${index}.dishId`, dish.id, { shouldValidate: true });
+      setValue(`lineItems.${index}.unitPrice`, dish.price, { shouldValidate: true });
     }
-    setLineItems(updated);
-  };
-
-  const removeLineItem = (index: number) => {
-    setLineItems(lineItems.filter((_, i) => i !== index));
   };
 
   const getTotal = () => {
-    return lineItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+    return fields.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   };
 
-  const handleSubmit = async () => {
+  const onSubmit = handleSubmit(async (data) => {
+    setSubmitError(null);
     try {
-      if (lineItems.length === 0) {
-        setError(t('orders.emptyLineItems'));
-        return;
-      }
-
       await orderService.create({
-        tableIdentifier: formData.tableIdentifier,
-        lineItems: lineItems.map(({ dishId, dishName, unitPrice, quantity }) => ({
-          dishId,
-          dishName,
-          unitPrice,
-          quantity,
+        tableIdentifier: data.tableIdentifier,
+        lineItems: data.lineItems.map((item) => ({
+          dishId: item.dishId,
+          unitPrice: item.unitPrice,
+          quantity: item.quantity,
         })),
       });
 
+      setSuccessMessage(t('notifications.orders.created'));
       handleCloseModal();
       void loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('orders.createError'));
+      setSubmitError(err instanceof Error ? err.message : t('orders.createError'));
     }
-  };
+  });
 
   const handleDelete = async () => {
     if (deleteConfirm.order) {
       try {
         await orderService.delete(deleteConfirm.order.id);
         setDeleteConfirm({ open: false, order: null });
+        setSuccessMessage(t('notifications.orders.deleted'));
         void loadData();
       } catch (err) {
         setError(err instanceof Error ? err.message : t('orders.deleteError'));
@@ -169,6 +179,7 @@ export default function OrdersPage() {
   const handleAdvanceStatus = async (order: Order) => {
     try {
       await orderService.advanceStatus(order.id);
+      setSuccessMessage(t('notifications.orders.statusUpdated'));
       void loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('orders.loadError'));
@@ -178,6 +189,7 @@ export default function OrdersPage() {
   const handleCancelStatus = async (order: Order) => {
     try {
       await orderService.cancelStatus(order.id);
+      setSuccessMessage(t('notifications.orders.statusUpdated'));
       void loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('orders.loadError'));
@@ -308,19 +320,19 @@ export default function OrdersPage() {
       )}
 
       {/* Create Order Dialog */}
-      <Dialog open={openModal} onClose={handleCloseModal} maxWidth="md" fullWidth>
-        <DialogTitle>{t('orders.createTitle')}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={3} sx={{ mt: 1 }}>
-            {error && <Alert severity="error">{error}</Alert>}
+        <Dialog open={openModal} onClose={handleCloseModal} maxWidth="md" fullWidth>
+          <DialogTitle>{t('orders.createTitle')}</DialogTitle>
+          <DialogContent>
+            <Stack spacing={3} sx={{ mt: 1 }}>
+            {submitError && <Alert severity="error">{submitError}</Alert>}
 
             <Stack direction="row" spacing={2}>
               <TextField
                 label={t('orders.tableIdentifier')}
                 fullWidth
-                value={formData.tableIdentifier}
-                onChange={(e) => setFormData({ ...formData, tableIdentifier: e.target.value })}
-                required
+                {...register('tableIdentifier')}
+                error={!!errors.tableIdentifier}
+                helperText={errors.tableIdentifier?.message}
               />
             </Stack>
 
@@ -328,15 +340,16 @@ export default function OrdersPage() {
               <Typography variant="subtitle2" gutterBottom>
                 {t('orders.lineItems')}
               </Typography>
-              {lineItems.map((item, index) => (
-                <Paper key={index} sx={{ p: { xs: 2, sm: 2.25 }, mb: 2 }}>
+              {fields.map((item, index) => (
+                <Paper key={item.id} sx={{ p: { xs: 2, sm: 2.25 }, mb: 2 }}>
                   <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }}>
                     <FormControl sx={{ flexGrow: 1, minWidth: { md: 280 } }}>
                       <InputLabel>{t('orders.dish')}</InputLabel>
                       <Select
-                        value={item.dishId}
+                        value={item.dishId || ''}
                         label={t('orders.dish')}
-                        onChange={(e) => updateLineItem(index, 'dishId', e.target.value)}
+                        onChange={(e) => updateLineItemDish(index, Number(e.target.value))}
+                        error={!!errors.lineItems?.[index]?.dishId}
                       >
                         {dishes.map((dish) => (
                           <MenuItem key={dish.id} value={dish.id}>
@@ -344,30 +357,41 @@ export default function OrdersPage() {
                           </MenuItem>
                         ))}
                       </Select>
+                      {errors.lineItems?.[index]?.dishId && (
+                        <Typography variant="caption" color="error">
+                          {errors.lineItems[index]?.dishId?.message}
+                        </Typography>
+                      )}
                     </FormControl>
                     <TextField
                       label={t('orders.quantity')}
                       type="number"
-                      value={item.quantity}
-                      onChange={(e) => updateLineItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                      {...register(`lineItems.${index}.quantity` as const, { valueAsNumber: true })}
+                      error={!!errors.lineItems?.[index]?.quantity}
+                      helperText={errors.lineItems?.[index]?.quantity?.message}
                       InputProps={{
-                        inputProps: { min: 1 },
+                        inputProps: { min: 1, max: 9999 },
                       }}
                       sx={{ width: { xs: '100%', md: 110 } }}
                     />
                     <Typography variant="body2" sx={{ minWidth: { md: 88 }, fontWeight: 700 }}>
-                      ${item.unitPrice.toFixed(2)}
+                      ${Number(item.unitPrice || 0).toFixed(2)}
                     </Typography>
                     <IconButton
                       color="error"
-                      onClick={() => removeLineItem(index)}
-                      disabled={lineItems.length === 1 && index === 0}
+                      onClick={() => remove(index)}
+                      disabled={fields.length === 1 && index === 0}
                     >
                       <Remove />
                     </IconButton>
                   </Stack>
                 </Paper>
               ))}
+              {errors.lineItems?.message && (
+                <Typography variant="caption" color="error">
+                  {errors.lineItems.message}
+                </Typography>
+              )}
               <Button
                 startIcon={<AddCircle />}
                 onClick={addLineItem}
@@ -390,9 +414,9 @@ export default function OrdersPage() {
         <DialogActions sx={{ gap: 1 }}>
           <Button onClick={handleCloseModal}>{t('common.cancel')}</Button>
           <Button
-            onClick={() => void handleSubmit()}
+            onClick={() => void onSubmit()}
             variant="contained"
-            disabled={lineItems.length === 0 || !formData.tableIdentifier}
+            disabled={fields.length === 0 || isSubmitting}
           >
             {t('orders.create')}
           </Button>
@@ -408,6 +432,12 @@ export default function OrdersPage() {
         })}
         onConfirm={() => void handleDelete()}
         onCancel={() => setDeleteConfirm({ open: false, order: null })}
+      />
+
+      <SnackbarNotice
+        open={Boolean(successMessage)}
+        message={successMessage}
+        onClose={() => setSuccessMessage('')}
       />
     </Box>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -13,14 +13,19 @@ import {
   InputAdornment,
 } from '@mui/material';
 import { Add, Edit, Delete, Search } from '@mui/icons-material';
-import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/common';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { PageHeader, ConfirmDialog, DataTable, EmptyState, SnackbarNotice } from '@/components/common';
 import { dishService } from '@/services';
 import type { Dish, Column } from '@/types';
 import { Restaurant } from '@mui/icons-material';
 import { useI18n } from '@/i18n';
+import { createDishSchema } from '@/validation/schemas';
+import { useRevalidateOnLanguageChange } from '@/hooks';
 
 export default function DishesPage() {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -31,13 +36,29 @@ export default function DishesPage() {
     dish: null,
   });
   const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    ingredients: '',
+  const dishSchema = useMemo(() => createDishSchema(t), [t]);
+  type DishFormData = z.infer<ReturnType<typeof createDishSchema>>;
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    trigger,
+    formState: { errors, isSubmitting },
+  } = useForm<DishFormData>({
+    resolver: zodResolver(dishSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      price: undefined,
+      ingredients: '',
+    },
   });
+
+  useRevalidateOnLanguageChange(trigger, language);
 
   useEffect(() => {
     void loadDishes();
@@ -58,23 +79,23 @@ export default function DishesPage() {
   const handleOpenModal = (dish?: Dish) => {
     if (dish) {
       setEditDish(dish);
-      setFormData({
+      reset({
         name: dish.name,
         description: dish.description || '',
-        price: dish.price.toString(),
+        price: dish.price,
         ingredients: dish.ingredients,
       });
     } else {
       setEditDish(null);
-      setFormData({
+      reset({
         name: '',
         description: '',
-        price: '',
+        price: undefined,
         ingredients: '',
       });
     }
     setOpenModal(true);
-    setError(null);
+    setSubmitError(null);
   };
 
   const handleCloseModal = () => {
@@ -82,33 +103,37 @@ export default function DishesPage() {
     setEditDish(null);
   };
 
-  const handleSubmit = async () => {
+  const onSubmit = handleSubmit(async (data) => {
+    setSubmitError(null);
     try {
       const payload = {
-        name: formData.name,
-        description: formData.description || undefined,
-        price: parseFloat(formData.price),
-        ingredients: formData.ingredients,
+        name: data.name,
+        description: data.description || undefined,
+        price: data.price,
+        ingredients: data.ingredients || '',
       };
 
       if (editDish) {
         await dishService.update(editDish.id, payload);
+        setSuccessMessage(t('notifications.dishes.updated'));
       } else {
         await dishService.create(payload);
+        setSuccessMessage(t('notifications.dishes.created'));
       }
 
       handleCloseModal();
       void loadDishes();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('dishes.saveError'));
+      setSubmitError(err instanceof Error ? err.message : t('dishes.saveError'));
     }
-  };
+  });
 
   const handleDelete = async () => {
     if (deleteConfirm.dish) {
       try {
         await dishService.delete(deleteConfirm.dish.id);
         setDeleteConfirm({ open: false, dish: null });
+        setSuccessMessage(t('notifications.dishes.deleted'));
         void loadDishes();
       } catch (err) {
         setError(err instanceof Error ? err.message : t('dishes.deleteError'));
@@ -230,45 +255,48 @@ export default function DishesPage() {
         <DialogTitle>{editDish ? t('dishes.editTitle') : t('dishes.addTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            {error && <Alert severity="error">{error}</Alert>}
+            {submitError && <Alert severity="error">{submitError}</Alert>}
             <TextField
+              {...register('name')}
               label={t('dishes.name')}
               fullWidth
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
+              error={!!errors.name}
+              helperText={errors.name?.message}
             />
             <TextField
+              {...register('description')}
               label={t('dishes.description')}
               fullWidth
               multiline
               rows={2}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              error={!!errors.description}
+              helperText={errors.description?.message}
             />
             <TextField
+              {...register('price', { valueAsNumber: true })}
               label={t('dishes.price')}
               type="number"
               fullWidth
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-              required
+              error={!!errors.price}
+              helperText={errors.price?.message}
               InputProps={{ startAdornment: '$' }}
+              inputProps={{ min: 0.01, max: 99999999.99, step: 0.01 }}
             />
             <TextField
+              {...register('ingredients')}
               label={t('dishes.ingredients')}
               fullWidth
               multiline
               rows={2}
-              value={formData.ingredients}
-              onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
               placeholder={t('dishes.ingredientsPlaceholder')}
+              error={!!errors.ingredients}
+              helperText={errors.ingredients?.message}
             />
           </Stack>
         </DialogContent>
         <DialogActions sx={{ gap: 1 }}>
           <Button onClick={handleCloseModal}>{t('common.cancel')}</Button>
-          <Button onClick={() => void handleSubmit()} variant="contained">
+          <Button onClick={() => void onSubmit()} variant="contained" disabled={isSubmitting}>
             {editDish ? t('common.update') : t('common.create')}
           </Button>
         </DialogActions>
@@ -281,6 +309,12 @@ export default function DishesPage() {
         message={t('dishes.deleteMessage', { name: deleteConfirm.dish?.name || '' })}
         onConfirm={() => void handleDelete()}
         onCancel={() => setDeleteConfirm({ open: false, dish: null })}
+      />
+
+      <SnackbarNotice
+        open={Boolean(successMessage)}
+        message={successMessage}
+        onClose={() => setSuccessMessage('')}
       />
     </Box>
   );
