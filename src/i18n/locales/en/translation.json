@@ -1,0 +1,169 @@
+{
+  "validation": {
+    "auth": {
+      "name": {
+        "required": "Name is required",
+        "min": "Name must be at least {min} characters",
+        "max": "Name must be at most {max} characters"
+      },
+      "email": {
+        "required": "Email is required",
+        "invalid": "Invalid email address",
+        "max": "Email must be at most {max} characters"
+      },
+      "password": {
+        "required": "Password is required",
+        "min": "Password must be at least {min} characters",
+        "max": "Password must be at most {max} characters"
+      },
+      "confirmPassword": {
+        "required": "Please confirm your password",
+        "match": "Passwords do not match"
+      }
+    },
+    "dish": {
+      "name": {
+        "required": "Dish name is required",
+        "min": "Dish name must be at least {min} characters",
+        "max": "Dish name must be at most {max} characters"
+      },
+      "description": {
+        "max": "Description must be at most {max} characters"
+      },
+      "price": {
+        "required": "Price is required",
+        "invalid": "Price must be a number",
+        "min": "Price must be at least {min}",
+        "max": "Price must be at most {max}"
+      },
+      "ingredients": {
+        "max": "Ingredients must be at most {max} characters"
+      }
+    },
+    "product": {
+      "name": {
+        "required": "Product name is required",
+        "min": "Product name must be at least {min} characters",
+        "max": "Product name must be at most {max} characters"
+      },
+      "description": {
+        "max": "Description must be at most {max} characters"
+      },
+      "stockLevel": {
+        "required": "Stock level is required",
+        "invalid": "Stock level must be a number",
+        "min": "Stock level must be at least {min}",
+        "max": "Stock level must be at most {max}"
+      },
+      "unitOfMeasure": {
+        "required": "Unit of measure is required",
+        "max": "Unit of measure must be at most {max} characters"
+      },
+      "unitCost": {
+        "required": "Unit cost is required",
+        "invalid": "Unit cost must be a number",
+        "min": "Unit cost must be at least {min}",
+        "max": "Unit cost must be at most {max}"
+      },
+      "lowStockThreshold": {
+        "invalid": "Low stock threshold must be a number",
+        "min": "Low stock threshold must be at least {min}",
+        "max": "Low stock threshold must be at most {max}"
+      },
+      "category": {
+        "max": "Category must be at most {max} characters"
+      },
+      "supplier": {
+        "max": "Supplier must be at most {max} characters"
+      }
+    },
+    "order": {
+      "tableIdentifier": {
+        "required": "Table identifier is required",
+        "max": "Table identifier must be at most {max} characters"
+      },
+      "lineItems": {
+        "min": "Add at least one line item"
+      },
+      "item": {
+        "dishId": {
+          "required": "Dish is required",
+          "invalid": "Dish must be selected",
+          "min": "Dish must be selected",
+          "max": "Dish must be selected"
+        },
+        "unitPrice": {
+          "required": "Unit price is required",
+          "invalid": "Unit price must be a number",
+          "min": "Unit price must be at least {min}",
+          "max": "Unit price must be at most {max}"
+        },
+        "quantity": {
+          "required": "Quantity is required",
+          "invalid": "Quantity must be a number",
+          "integer": "Quantity must be a whole number",
+          "min": "Quantity must be at least {min}",
+          "max": "Quantity must be at most {max}"
+        }
+      }
+    },
+    "settings": {
+      "name": {
+        "required": "Name is required",
+        "min": "Name must be at least {min} characters",
+        "max": "Name must be at most {max} characters"
+      },
+      "email": {
+        "required": "Email is required",
+        "invalid": "Invalid email address",
+        "max": "Email must be at most {max} characters"
+      },
+      "currentPassword": {
+        "required": "Current password is required"
+      },
+      "newPassword": {
+        "required": "New password is required",
+        "min": "New password must be at least {min} characters",
+        "max": "New password must be at most {max} characters"
+      },
+      "confirmPassword": {
+        "required": "Please confirm your new password",
+        "match": "New passwords do not match"
+      }
+    },
+    "category": {
+      "name": {
+        "required": "Category name is required",
+        "max": "Category name must be at most {max} characters"
+      }
+    }
+  },
+  "notifications": {
+    "dishes": {
+      "created": "Dish created successfully",
+      "updated": "Dish updated successfully",
+      "deleted": "Dish deleted successfully"
+    },
+    "products": {
+      "created": "Product created successfully",
+      "updated": "Product updated successfully",
+      "deleted": "Product deleted successfully"
+    },
+    "orders": {
+      "created": "Order created successfully",
+      "deleted": "Order deleted successfully",
+      "statusUpdated": "Order status updated"
+    },
+    "profile": {
+      "updated": "Profile updated successfully"
+    },
+    "password": {
+      "updated": "Password updated successfully"
+    },
+    "category": {
+      "created": "Category created successfully",
+      "updated": "Category updated successfully",
+      "deleted": "Category deleted successfully"
+    }
+  }
+}
