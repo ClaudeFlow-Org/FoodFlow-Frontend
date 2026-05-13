@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { financeService } from '@/services';
 import type { DashboardMetrics, FinancialReport, ReportPeriod } from '@/types';
 import { useI18n } from '@/i18n';
+import { getLocalizedErrorMessage, toErrorMessage, type ErrorMessage } from '@/utils/errorMessages';
 
 export function useFinance() {
   const { t } = useI18n();
@@ -9,7 +10,7 @@ export function useFinance() {
   const [report, setReport] = useState<FinancialReport | null>(null);
   const [period, setPeriod] = useState<ReportPeriod>('WEEKLY');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorMessage | null>(null);
 
   const loadDashboard = async () => {
     try {
@@ -18,7 +19,7 @@ export function useFinance() {
       const data = await financeService.getDashboardMetrics(period);
       setMetrics(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('dashboard.loadError'));
+      setError(toErrorMessage(err, 'dashboard.loadError'));
     } finally {
       setLoading(false);
     }
@@ -33,7 +34,7 @@ export function useFinance() {
       setPeriod(reportPeriod);
       setMetrics(await financeService.getDashboardMetrics(reportPeriod));
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('finance.loadError'));
+      setError(toErrorMessage(err, 'finance.loadError'));
     } finally {
       setLoading(false);
     }
@@ -48,7 +49,7 @@ export function useFinance() {
     report,
     period,
     loading,
-    error,
+    error: error ? getLocalizedErrorMessage(error, t, 'finance.loadError') : null,
     loadDashboard,
     loadReport,
     setPeriod,

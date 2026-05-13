@@ -17,6 +17,7 @@ import { MetricCard, DataTable, EmptyState, PageHeader } from '@/components/comm
 import { financeService, orderService } from '@/services';
 import type { DashboardMetrics, Column, Order, ReportPeriod } from '@/types';
 import { useI18n } from '@/i18n';
+import { getLocalizedErrorMessage, toErrorMessage, type ErrorMessage } from '@/utils/errorMessages';
 
 const getPeriodWindow = (period: ReportPeriod) => {
   const start = new Date();
@@ -90,11 +91,13 @@ export default function DashboardPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorMessage | null>(null);
 
   useEffect(() => {
     void loadData();
   }, [period]);
+
+  const errorMessage = error ? getLocalizedErrorMessage(error, t, 'dashboard.loadError') : null;
 
   const loadData = async () => {
     try {
@@ -123,7 +126,7 @@ export default function DashboardPage() {
         throw ordersResult.reason;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('dashboard.loadError'));
+      setError(toErrorMessage(err, 'dashboard.loadError'));
     } finally {
       setLoading(false);
     }
@@ -197,8 +200,8 @@ export default function DashboardPage() {
     );
   }
 
-  if (error) {
-    return <Alert severity="error">{error}</Alert>;
+  if (errorMessage) {
+    return <Alert severity="error">{errorMessage}</Alert>;
   }
 
   return (

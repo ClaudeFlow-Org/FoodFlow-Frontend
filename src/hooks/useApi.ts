@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useI18n } from '@/i18n';
+import { getLocalizedErrorMessage, toErrorMessage, type ErrorMessage } from '@/utils/errorMessages';
 
 interface UseApiResult<T> {
   data: T | null;
@@ -13,7 +14,7 @@ export function useApi<T>(apiCall: () => Promise<T>): UseApiResult<T> {
   const { t } = useI18n();
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorMessage | null>(null);
 
   const execute = useCallback(async () => {
     try {
@@ -22,11 +23,11 @@ export function useApi<T>(apiCall: () => Promise<T>): UseApiResult<T> {
       const result = await apiCall();
       setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.errorOccurred'));
+      setError(toErrorMessage(err, 'common.errorOccurred'));
     } finally {
       setLoading(false);
     }
-  }, [apiCall, t]);
+  }, [apiCall]);
 
   const reset = useCallback(() => {
     setData(null);
@@ -34,5 +35,11 @@ export function useApi<T>(apiCall: () => Promise<T>): UseApiResult<T> {
     setLoading(false);
   }, []);
 
-  return { data, loading, error, execute, reset };
+  return {
+    data,
+    loading,
+    error: error ? getLocalizedErrorMessage(error, t, 'common.errorOccurred') : null,
+    execute,
+    reset,
+  };
 }

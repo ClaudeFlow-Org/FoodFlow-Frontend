@@ -29,6 +29,7 @@ import { PageHeader, MetricCard, EmptyState } from '@/components/common';
 import { financeService } from '@/services';
 import type { DashboardMetrics, FinancialReport, ReportPeriod } from '@/types';
 import { useI18n } from '@/i18n';
+import { getLocalizedErrorMessage, toErrorMessage, type ErrorMessage } from '@/utils/errorMessages';
 
 const COLORS = ['#2563eb', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#64748b'];
 
@@ -45,11 +46,13 @@ export default function FinancePage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [report, setReport] = useState<FinancialReport | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorMessage | null>(null);
 
   useEffect(() => {
     void loadData();
   }, [period]);
+
+  const errorMessage = error ? getLocalizedErrorMessage(error, t, 'finance.loadError') : null;
 
   const loadData = async () => {
     try {
@@ -62,7 +65,7 @@ export default function FinancePage() {
       setMetrics(metricsData);
       setReport(reportData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('finance.loadError'));
+      setError(toErrorMessage(err, 'finance.loadError'));
     } finally {
       setLoading(false);
     }
@@ -116,11 +119,11 @@ export default function FinancePage() {
     );
   }
 
-  if (error) {
+  if (errorMessage) {
     return (
       <Box>
         <PageHeader title={t('finance.title')} subtitle={t('finance.subtitle')} />
-        <Alert severity="error">{error}</Alert>
+        <Alert severity="error">{errorMessage}</Alert>
       </Box>
     );
   }

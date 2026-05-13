@@ -26,6 +26,12 @@ import type { SubscriptionPlan, UserSubscription } from '@/types';
 import { CheckCircle, Star } from '@mui/icons-material';
 import { useI18n } from '@/i18n';
 import { formatCurrency } from '@/utils';
+import {
+  getLocalizedErrorMessage,
+  toErrorMessage,
+  translatedError,
+  type ErrorMessage,
+} from '@/utils/errorMessages';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -59,7 +65,7 @@ export default function SettingsPage() {
     plan: null,
   });
   const [success, setSuccess] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<ErrorMessage | null>(null);
 
   const getPlanName = (plan: SubscriptionPlan) => t(`plans.${plan.type}.name`);
   const getPlanFeature = (plan: SubscriptionPlan, feature: string, index: number) => {
@@ -67,6 +73,7 @@ export default function SettingsPage() {
     const translated = t(key);
     return translated === key ? feature : translated;
   };
+  const errorMessage = error ? getLocalizedErrorMessage(error, t, 'common.errorOccurred') : null;
 
   useEffect(() => {
     if (user) {
@@ -97,28 +104,35 @@ export default function SettingsPage() {
     try {
       const emailChanged = user?.email !== profileData.email;
       await updateProfile({ name: profileData.name, email: profileData.email });
-      setError('');
+      setError(null);
 
       if (emailChanged) {
         setSuccess(t('settings.profileUpdated') + '. ' + t('settings.emailChangedRedirect'));
         setTimeout(() => {
           // Logout and redirect to login
           useAuthStore.getState().logout();
-          navigate('/login');
+          void navigate('/login');
         }, 3000);
       } else {
         setSuccess(t('settings.profileUpdated'));
         setTimeout(() => setSuccess(''), 3000);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('settings.profileUpdateError'));
+      setError(toErrorMessage(err, 'settings.profileUpdateError'));
       setSuccess('');
     }
   };
 
   const handlePasswordChange = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError(t('settings.passwordMismatch'));
+      setError(translatedError('settings.passwordMismatch'));
+      setSuccess('');
+      return;
+    }
+
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      setError(translatedError('settings.passwordSameAsCurrent'));
+      setSuccess('');
       return;
     }
 
@@ -128,11 +142,11 @@ export default function SettingsPage() {
         newPassword: passwordData.newPassword,
       });
       setSuccess(t('settings.passwordChanged'));
-      setError('');
+      setError(null);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('settings.passwordChangeError'));
+      setError(toErrorMessage(err, 'settings.passwordChangeError'));
       setSuccess('');
     }
   };
@@ -148,7 +162,7 @@ export default function SettingsPage() {
         setSuccess(t('settings.subscriptionUpdated'));
         setTimeout(() => setSuccess(''), 3000);
       } catch (err) {
-        setError(err instanceof Error ? err.message : t('settings.subscriptionUpdateError'));
+        setError(toErrorMessage(err, 'settings.subscriptionUpdateError'));
       }
     }
   };
@@ -163,9 +177,9 @@ export default function SettingsPage() {
         </Alert>
       )}
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-          {error}
+      {errorMessage && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {errorMessage}
         </Alert>
       )}
 

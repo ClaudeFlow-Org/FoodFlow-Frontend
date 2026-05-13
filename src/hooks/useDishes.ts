@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { dishService } from '@/services';
 import type { Dish, CreateDishRequest, UpdateDishRequest } from '@/types';
 import { useI18n } from '@/i18n';
+import { getLocalizedErrorMessage, toErrorMessage, type ErrorMessage } from '@/utils/errorMessages';
 
 export function useDishes() {
   const { t } = useI18n();
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorMessage | null>(null);
 
   const loadDishes = async () => {
     try {
@@ -16,7 +17,7 @@ export function useDishes() {
       const data = await dishService.getAll();
       setDishes(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('dishes.loadError'));
+      setError(toErrorMessage(err, 'dishes.loadError'));
     } finally {
       setLoading(false);
     }
@@ -44,7 +45,7 @@ export function useDishes() {
   return {
     dishes,
     loading,
-    error,
+    error: error ? getLocalizedErrorMessage(error, t, 'dishes.loadError') : null,
     loadDishes,
     createDish,
     updateDish,

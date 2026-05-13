@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { productService } from '@/services';
 import type { Product, CreateProductRequest, UpdateProductRequest } from '@/types';
 import { useI18n } from '@/i18n';
+import { getLocalizedErrorMessage, toErrorMessage, type ErrorMessage } from '@/utils/errorMessages';
 
 export function useProducts() {
   const { t } = useI18n();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorMessage | null>(null);
 
   const loadProducts = async () => {
     try {
@@ -16,7 +17,7 @@ export function useProducts() {
       const data = await productService.getAll();
       setProducts(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('products.loadError'));
+      setError(toErrorMessage(err, 'products.loadError'));
     } finally {
       setLoading(false);
     }
@@ -48,7 +49,7 @@ export function useProducts() {
   return {
     products,
     loading,
-    error,
+    error: error ? getLocalizedErrorMessage(error, t, 'products.loadError') : null,
     loadProducts,
     createProduct,
     updateProduct,

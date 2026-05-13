@@ -5,6 +5,7 @@ import type {
   UserSubscription,
   SubscribeRequest,
 } from '@/types';
+import { LocalizedError } from '@/utils/errorMessages';
 
 interface BackendSubscriptionPlan {
   name: string;
@@ -102,7 +103,10 @@ class SubscriptionService {
         },
       };
     } catch (error) {
-      if (error instanceof Error && error.message.toLowerCase().includes('subscription not found')) {
+      if (
+        (error instanceof LocalizedError && error.status === 404) ||
+        (error instanceof Error && error.message.toLowerCase().includes('subscription not found'))
+      ) {
         return null;
       }
       throw error;

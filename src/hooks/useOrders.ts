@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { orderService } from '@/services';
 import type { Order, CreateOrderRequest } from '@/types';
 import { useI18n } from '@/i18n';
+import { getLocalizedErrorMessage, toErrorMessage, type ErrorMessage } from '@/utils/errorMessages';
 
 export function useOrders() {
   const { t } = useI18n();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorMessage | null>(null);
 
   const loadOrders = async () => {
     try {
@@ -16,7 +17,7 @@ export function useOrders() {
       const data = await orderService.getAll();
       setOrders(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('orders.loadError'));
+      setError(toErrorMessage(err, 'orders.loadError'));
     } finally {
       setLoading(false);
     }
@@ -47,7 +48,7 @@ export function useOrders() {
   return {
     orders,
     loading,
-    error,
+    error: error ? getLocalizedErrorMessage(error, t, 'orders.loadError') : null,
     loadOrders,
     createOrder,
     deleteOrder,
