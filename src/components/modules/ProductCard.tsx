@@ -1,5 +1,6 @@
 import { Card, CardContent, Typography, Box, SxProps } from '@mui/material';
-import { Inventory2Outlined, Warning } from '@mui/icons-material';
+import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined';
+import Warning from '@mui/icons-material/Warning';
 import type { Product } from '@/types';
 import { formatCurrency, isLowStock } from '@/utils';
 import { useI18n } from '@/i18n';

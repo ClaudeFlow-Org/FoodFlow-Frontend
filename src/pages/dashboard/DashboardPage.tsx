@@ -12,7 +12,9 @@ import {
   Divider,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { AttachMoney, ShoppingCart, Restaurant } from '@mui/icons-material';
+import AttachMoney from '@mui/icons-material/AttachMoney';
+import ShoppingCart from '@mui/icons-material/ShoppingCart';
+import Restaurant from '@mui/icons-material/Restaurant';
 import { MetricCard, DataTable, EmptyState, PageHeader } from '@/components/common';
 import { financeService, orderService } from '@/services';
 import type { DashboardMetrics, Column, Order, ReportPeriod } from '@/types';

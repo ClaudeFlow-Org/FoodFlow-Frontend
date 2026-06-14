@@ -1,5 +1,5 @@
 import { Card, CardContent, Typography, Box, SxProps } from '@mui/material';
-import { Restaurant } from '@mui/icons-material';
+import Restaurant from '@mui/icons-material/Restaurant';
 import type { Dish } from '@/types';
 import { useI18n } from '@/i18n';
 

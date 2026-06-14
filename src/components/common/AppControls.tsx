@@ -1,5 +1,6 @@
 import { Box, Button, ButtonGroup, IconButton, Tooltip } from '@mui/material';
-import { DarkMode, LightMode } from '@mui/icons-material';
+import DarkMode from '@mui/icons-material/DarkMode';
+import LightMode from '@mui/icons-material/LightMode';
 import { useI18n, type Language } from '@/i18n';
 import { useThemeMode } from '@/theme';
 

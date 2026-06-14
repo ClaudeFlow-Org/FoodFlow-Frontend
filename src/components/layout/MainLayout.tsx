@@ -17,16 +17,14 @@ import {
   Menu,
   MenuItem,
 } from '@mui/material';
-import {
-  Menu as MenuIcon,
-  Dashboard as DashboardIcon,
-  Restaurant as RestaurantIcon,
-  Inventory as InventoryIcon,
-  Receipt as ReceiptIcon,
-  AttachMoney as FinanceIcon,
-  Settings as SettingsIcon,
-  Logout as LogoutIcon,
-} from '@mui/icons-material';
+import MenuIcon from '@mui/icons-material/Menu';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import RestaurantIcon from '@mui/icons-material/Restaurant';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import FinanceIcon from '@mui/icons-material/AttachMoney';
+import SettingsIcon from '@mui/icons-material/Settings';
+import LogoutIcon from '@mui/icons-material/Logout';
 import { useAuthStore } from '@/store/authStore';
 import { AppControls } from '@/components/common';
 import { useI18n } from '@/i18n';

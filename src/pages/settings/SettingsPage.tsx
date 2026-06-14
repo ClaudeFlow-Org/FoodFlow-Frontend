@@ -23,7 +23,8 @@ import { PageHeader, PasswordVisibilityToggle } from '@/components/common';
 import { useAuthStore } from '@/store/authStore';
 import { authService, subscriptionService } from '@/services';
 import type { SubscriptionPlan, UserSubscription } from '@/types';
-import { CheckCircle, Star } from '@mui/icons-material';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import Star from '@mui/icons-material/Star';
 import { useI18n } from '@/i18n';
 import { formatCurrency } from '@/utils';
 import {

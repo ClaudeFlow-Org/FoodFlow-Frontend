@@ -10,7 +10,8 @@ import {
   InputLabel,
   Typography,
 } from '@mui/material';
-import { Add, Delete } from '@mui/icons-material';
+import Add from '@mui/icons-material/Add';
+import Delete from '@mui/icons-material/Delete';
 import type { Dish } from '@/types';
 import { formatCurrency } from '@/utils';
 import { useI18n } from '@/i18n';

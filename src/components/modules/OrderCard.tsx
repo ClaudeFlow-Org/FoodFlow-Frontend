@@ -1,5 +1,5 @@
 import { Card, CardContent, Typography, Chip, Box, Stack, Divider, SxProps } from '@mui/material';
-import { Receipt } from '@mui/icons-material';
+import Receipt from '@mui/icons-material/Receipt';
 import type { Order } from '@/types';
 import { formatCurrency, formatDateTime } from '@/utils';
 import { useI18n } from '@/i18n';

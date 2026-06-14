@@ -20,11 +20,16 @@ import {
   ToggleButtonGroup,
   Typography,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, Warning, Category as CategoryIcon } from '@mui/icons-material';
+import Add from '@mui/icons-material/Add';
+import Edit from '@mui/icons-material/Edit';
+import Delete from '@mui/icons-material/Delete';
+import Search from '@mui/icons-material/Search';
+import Warning from '@mui/icons-material/Warning';
+import CategoryIcon from '@mui/icons-material/Category';
+import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined';
 import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/common';
 import { productService } from '@/services';
 import type { Product, ProductCategory, Column } from '@/types';
-import { Inventory2Outlined } from '@mui/icons-material';
 import { useI18n } from '@/i18n';
 import {
   getLocalizedErrorMessage,

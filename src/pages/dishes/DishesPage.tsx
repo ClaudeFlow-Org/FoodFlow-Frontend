@@ -12,11 +12,14 @@ import {
   Alert,
   InputAdornment,
 } from '@mui/material';
-import { Add, Edit, Delete, Search } from '@mui/icons-material';
+import Add from '@mui/icons-material/Add';
+import Edit from '@mui/icons-material/Edit';
+import Delete from '@mui/icons-material/Delete';
+import Search from '@mui/icons-material/Search';
+import Restaurant from '@mui/icons-material/Restaurant';
 import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/common';
 import { dishService } from '@/services';
 import type { Dish, Column } from '@/types';
-import { Restaurant } from '@mui/icons-material';
 import { useI18n } from '@/i18n';
 import { getLocalizedErrorMessage, toErrorMessage, type ErrorMessage } from '@/utils/errorMessages';
 

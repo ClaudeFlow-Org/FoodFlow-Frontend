@@ -18,11 +18,16 @@ import {
   Paper,
   Typography,
 } from '@mui/material';
-import { Add, Delete, Remove, AddCircle, CheckCircle, Cancel } from '@mui/icons-material';
+import Add from '@mui/icons-material/Add';
+import Delete from '@mui/icons-material/Delete';
+import Remove from '@mui/icons-material/Remove';
+import AddCircle from '@mui/icons-material/AddCircle';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import Cancel from '@mui/icons-material/Cancel';
+import Receipt from '@mui/icons-material/Receipt';
 import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/common';
 import { orderService, dishService } from '@/services';
 import type { Order, Dish, CreateLineItemRequest, OrderType, OrderStatus, Column } from '@/types';
-import { Receipt } from '@mui/icons-material';
 import { useI18n } from '@/i18n';
 import {
   getLocalizedErrorMessage,
