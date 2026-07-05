@@ -12,11 +12,14 @@ import {
   Divider,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { AttachMoney, ShoppingCart, Restaurant } from '@mui/icons-material';
+import AttachMoney from '@mui/icons-material/AttachMoney';
+import ShoppingCart from '@mui/icons-material/ShoppingCart';
+import Restaurant from '@mui/icons-material/Restaurant';
 import { MetricCard, DataTable, EmptyState, PageHeader } from '@/components/common';
 import { financeService, orderService } from '@/services';
 import type { DashboardMetrics, Column, Order, ReportPeriod } from '@/types';
 import { useI18n } from '@/i18n';
+import { formatCurrency } from '@/utils';
 import { getLocalizedErrorMessage, toErrorMessage, type ErrorMessage } from '@/utils/errorMessages';
 
 const getPeriodWindow = (period: ReportPeriod) => {
@@ -103,21 +106,30 @@ export default function DashboardPage() {
     try {
       setLoading(true);
       setError(null);
-      const [metricsResult, ordersResult] = await Promise.allSettled([
+      const [metricsResult, reportResult, ordersResult] = await Promise.allSettled([
         financeService.getDashboardMetrics(period),
+        financeService.getReport(period),
         orderService.getAll(),
       ]);
 
       const ordersData = ordersResult.status === 'fulfilled' ? ordersResult.value : [];
       setRecentOrders(filterOrdersByPeriod(ordersData, period).slice(0, 5));
 
-      if (metricsResult.status === 'fulfilled') {
+      if (metricsResult.status === 'fulfilled' || reportResult.status === 'fulfilled') {
         const fallbackMetrics = buildMetricsFromOrders(ordersData, period);
+        const reportData = reportResult.status === 'fulfilled' ? reportResult.value : null;
+        const baseMetrics = metricsResult.status === 'fulfilled' ? metricsResult.value : fallbackMetrics;
         setMetrics({
-          ...metricsResult.value,
+          ...baseMetrics,
+          totalIncome: reportData?.totalIncome ?? baseMetrics.totalIncome,
+          totalExpenses: reportData?.totalExpenses ?? baseMetrics.totalExpenses,
+          profit: reportData?.profit ?? baseMetrics.profit,
+          orderCount: reportData?.orderCount ?? baseMetrics.orderCount,
           topDishes:
-            metricsResult.value.topDishes.length > 0
-              ? metricsResult.value.topDishes
+            reportData?.topDishes?.length
+              ? reportData.topDishes
+              : baseMetrics.topDishes.length > 0
+                ? baseMetrics.topDishes
               : fallbackMetrics.topDishes,
         });
       } else if (ordersResult.status === 'fulfilled') {
@@ -132,10 +144,7 @@ export default function DashboardPage() {
     }
   };
 
-  const formatCurrency = (value: number | undefined | null) => {
-    if (value === undefined || value === null) return '$0.00';
-    return `$${value.toFixed(2)}`;
-  };
+  const formatMoney = (value: number | undefined | null) => formatCurrency(value ?? 0);
 
   const orderColumns: Column<Order>[] = [
     {
@@ -151,7 +160,7 @@ export default function DashboardPage() {
     {
       id: 'total',
       label: t('orders.total'),
-      render: (row: Order) => formatCurrency(row.totalAmount),
+      render: (row: Order) => formatMoney(row.totalAmount),
     },
     {
       id: 'status',
@@ -242,19 +251,19 @@ export default function DashboardPage() {
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2.5} sx={{ mb: 3.5 }}>
             <MetricCard
               title={t('dashboard.totalIncome')}
-              value={formatCurrency(metrics.totalIncome)}
+              value={formatMoney(metrics.totalIncome)}
               color="warning"
               sx={{ flex: 1 }}
             />
             <MetricCard
               title={t('dashboard.totalExpenses')}
-              value={formatCurrency(metrics.totalExpenses)}
+              value={formatMoney(metrics.totalExpenses)}
               color="error"
               sx={{ flex: 1 }}
             />
             <MetricCard
               title={t('dashboard.profit')}
-              value={formatCurrency(metrics.profit)}
+              value={formatMoney(metrics.profit)}
               color={metrics.profit >= 0 ? 'info' : 'error'}
               sx={{ flex: 1 }}
             />
@@ -332,7 +341,7 @@ export default function DashboardPage() {
                           </Typography>
                         </Box>
                         <Typography variant="body2" color="primary.main" fontWeight="bold" sx={{ whiteSpace: 'nowrap' }}>
-                          {formatCurrency(dish.totalRevenue)}
+                          {formatMoney(dish.totalRevenue)}
                         </Typography>
                       </Box>
                     ))}

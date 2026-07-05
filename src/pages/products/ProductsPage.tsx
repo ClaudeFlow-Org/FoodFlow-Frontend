@@ -12,20 +12,29 @@ import {
   Stack,
   Alert,
   InputAdornment,
+  MenuItem,
   Autocomplete,
   List,
   ListItem,
   ListItemText,
+  Paper,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, Warning, Category as CategoryIcon } from '@mui/icons-material';
+import Add from '@mui/icons-material/Add';
+import AddShoppingCart from '@mui/icons-material/AddShoppingCart';
+import Edit from '@mui/icons-material/Edit';
+import Delete from '@mui/icons-material/Delete';
+import Search from '@mui/icons-material/Search';
+import Warning from '@mui/icons-material/Warning';
+import CategoryIcon from '@mui/icons-material/Category';
+import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined';
 import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/common';
 import { productService } from '@/services';
 import type { Product, ProductCategory, Column } from '@/types';
-import { Inventory2Outlined } from '@mui/icons-material';
 import { useI18n } from '@/i18n';
+import { formatCurrency, getDisplayCurrencySymbol } from '@/utils';
 import {
   getLocalizedErrorMessage,
   toErrorMessage,
@@ -36,16 +45,69 @@ import {
 const PRODUCT_STOCK_LIMIT = 10000;
 const MAX_PRODUCT_COST = 999_999;
 const LOW_STOCK_THRESHOLD_LIMIT = 10000;
+const INVENTORY_UNIT_OPTIONS = [
+  { value: 'kg', label: 'kg' },
+  { value: 'g', label: 'g' },
+  { value: 'l', label: 'L' },
+  { value: 'ml', label: 'ml' },
+  { value: 'unidad', label: 'unidad' },
+];
+const INVENTORY_UNIT_VALUES = INVENTORY_UNIT_OPTIONS.map((option) => option.value);
+
+const normalizeCategoryKey = (name: string) =>
+  name
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const sortProductCategories = (categories: ProductCategory[]) =>
+  [...categories].sort((first, second) =>
+    first.name.localeCompare(second.name, undefined, { sensitivity: 'base' })
+  );
+
+const normalizeInventoryUnit = (unit: string) => {
+  const normalized = unit
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\./g, '');
+
+  if (['kg', 'kilo', 'kilos', 'kilogramo', 'kilogramos'].includes(normalized)) {
+    return 'kg';
+  }
+  if (['g', 'gr', 'grs', 'gramo', 'gramos'].includes(normalized)) {
+    return 'g';
+  }
+  if (['l', 'lt', 'lts', 'litro', 'litros'].includes(normalized)) {
+    return 'l';
+  }
+  if (['ml', 'mililitro', 'mililitros'].includes(normalized)) {
+    return 'ml';
+  }
+  if (['u', 'und', 'unidad', 'unidades', 'unit', 'units'].includes(normalized)) {
+    return 'unidad';
+  }
+
+  return INVENTORY_UNIT_VALUES.includes(unit) ? unit : '';
+};
 
 interface ProductFormData {
   name: string;
   description: string;
   stockLevel: string;
   unitOfMeasure: string;
-  unitCost: string;
+  purchaseTotalCost: string;
   lowStockThreshold: string;
   category: string;
   supplier: string;
+}
+
+interface PurchaseFormData {
+  quantity: string;
+  unitOfMeasure: string;
+  totalCost: string;
 }
 
 const parseFormNumber = (value: string) => {
@@ -57,9 +119,45 @@ const parseFormNumber = (value: string) => {
   return Number.isFinite(number) ? number : Number.NaN;
 };
 
+const getInventoryUnitDimension = (unit: string) => {
+  const normalized = normalizeInventoryUnit(unit);
+  if (['kg', 'g'].includes(normalized)) {
+    return 'mass';
+  }
+  if (['l', 'ml'].includes(normalized)) {
+    return 'volume';
+  }
+  if (normalized === 'unidad') {
+    return 'count';
+  }
+  return `custom:${normalizeCategoryKey(unit)}`;
+};
+
+const getInventoryUnitBaseFactor = (unit: string) => {
+  const normalized = normalizeInventoryUnit(unit);
+  if (normalized === 'kg' || normalized === 'l') {
+    return 1000;
+  }
+  return 1;
+};
+
+const areInventoryUnitsCompatible = (fromUnit: string, toUnit: string) =>
+  getInventoryUnitDimension(fromUnit) === getInventoryUnitDimension(toUnit);
+
+const convertInventoryQuantity = (quantity: number, fromUnit: string, toUnit: string) => {
+  if (!areInventoryUnitsCompatible(fromUnit, toUnit)) {
+    return null;
+  }
+
+  return quantity * getInventoryUnitBaseFactor(fromUnit) / getInventoryUnitBaseFactor(toUnit);
+};
+
+const getCompatibleInventoryUnitOptions = (stockUnit: string) =>
+  INVENTORY_UNIT_OPTIONS.filter((option) => areInventoryUnitsCompatible(option.value, stockUnit));
+
 const validateProductForm = (formData: ProductFormData): ErrorMessage | null => {
   const stockLevel = parseFormNumber(formData.stockLevel);
-  const unitCost = parseFormNumber(formData.unitCost);
+  const purchaseTotalCost = parseFormNumber(formData.purchaseTotalCost);
   const lowStockThreshold = parseFormNumber(formData.lowStockThreshold);
 
   if (!formData.name.trim()) {
@@ -86,20 +184,20 @@ const validateProductForm = (formData: ProductFormData): ErrorMessage | null => 
     return translatedError('products.validation.unitRequired');
   }
 
-  if (unitCost === null) {
-    return translatedError('products.validation.unitCostRequired');
+  if (purchaseTotalCost === null) {
+    return translatedError('products.validation.purchaseCostRequired');
   }
 
-  if (Number.isNaN(unitCost)) {
-    return translatedError('products.validation.unitCostInvalid');
+  if (Number.isNaN(purchaseTotalCost)) {
+    return translatedError('products.validation.purchaseCostInvalid');
   }
 
-  if (unitCost < 0) {
-    return translatedError('products.validation.unitCostNonNegative');
+  if (purchaseTotalCost < 0) {
+    return translatedError('products.validation.purchaseCostNonNegative');
   }
 
-  if (unitCost > MAX_PRODUCT_COST) {
-    return translatedError('products.validation.unitCostMax', { max: MAX_PRODUCT_COST });
+  if (purchaseTotalCost > MAX_PRODUCT_COST) {
+    return translatedError('products.validation.purchaseCostMax', { max: MAX_PRODUCT_COST });
   }
 
   if (Number.isNaN(lowStockThreshold)) {
@@ -115,6 +213,79 @@ const validateProductForm = (formData: ProductFormData): ErrorMessage | null => 
   }
 
   return null;
+};
+
+const validatePurchaseForm = (formData: PurchaseFormData, product: Product | null): ErrorMessage | null => {
+  const quantity = parseFormNumber(formData.quantity);
+  const totalCost = parseFormNumber(formData.totalCost);
+
+  if (!product) {
+    return translatedError('products.purchaseProductRequired');
+  }
+
+  if (quantity === null) {
+    return translatedError('products.validation.purchaseQuantityRequired');
+  }
+
+  if (Number.isNaN(quantity)) {
+    return translatedError('products.validation.purchaseQuantityInvalid');
+  }
+
+  if (quantity <= 0) {
+    return translatedError('products.validation.purchaseQuantityPositive');
+  }
+
+  if (!formData.unitOfMeasure.trim()) {
+    return translatedError('products.validation.unitRequired');
+  }
+
+  if (!areInventoryUnitsCompatible(formData.unitOfMeasure, product.unitOfMeasure)) {
+    return translatedError('products.validation.purchaseUnitInvalid');
+  }
+
+  if (totalCost === null) {
+    return translatedError('products.validation.purchaseCostRequired');
+  }
+
+  if (Number.isNaN(totalCost)) {
+    return translatedError('products.validation.purchaseCostInvalid');
+  }
+
+  if (totalCost <= 0) {
+    return translatedError('products.validation.purchaseCostPositive');
+  }
+
+  if (totalCost > MAX_PRODUCT_COST) {
+    return translatedError('products.validation.purchaseCostMax', { max: MAX_PRODUCT_COST });
+  }
+
+  return null;
+};
+
+const getInitialProductFormData = (product?: Product | null): ProductFormData => {
+  if (!product) {
+    return {
+      name: '',
+      description: '',
+      stockLevel: '',
+      unitOfMeasure: '',
+      purchaseTotalCost: '',
+      lowStockThreshold: '10',
+      category: '',
+      supplier: '',
+    };
+  }
+
+  return {
+    name: product.name,
+    description: product.description || '',
+    stockLevel: product.stockLevel.toString(),
+    unitOfMeasure: normalizeInventoryUnit(product.unitOfMeasure),
+    purchaseTotalCost: (product.stockLevel * product.unitCost).toString(),
+    lowStockThreshold: product.lowStockThreshold.toString(),
+    category: product.category || '',
+    supplier: product.supplier || '',
+  };
 };
 
 export default function ProductsPage() {
@@ -136,19 +307,21 @@ export default function ProductsPage() {
     open: false,
     category: null,
   });
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const [error, setError] = useState<ErrorMessage | null>(null);
   const [categoryError, setCategoryError] = useState<ErrorMessage | null>(null);
-
-  const [formData, setFormData] = useState<ProductFormData>({
-    name: '',
-    description: '',
-    stockLevel: '',
-    unitOfMeasure: '',
-    unitCost: '',
-    lowStockThreshold: '',
-    category: '',
-    supplier: '',
+  const [purchaseDialog, setPurchaseDialog] = useState<{ open: boolean; product: Product | null }>({
+    open: false,
+    product: null,
   });
+  const [purchaseForm, setPurchaseForm] = useState<PurchaseFormData>({
+    quantity: '',
+    unitOfMeasure: '',
+    totalCost: '',
+  });
+  const [purchaseError, setPurchaseError] = useState<ErrorMessage | null>(null);
+
+  const [formData, setFormData] = useState<ProductFormData>(getInitialProductFormData());
 
   useEffect(() => {
     void loadProducts();
@@ -157,6 +330,9 @@ export default function ProductsPage() {
   const errorMessage = error ? getLocalizedErrorMessage(error, t, 'products.loadError') : null;
   const categoryErrorMessage = categoryError
     ? getLocalizedErrorMessage(categoryError, t, 'products.categorySaveError')
+    : null;
+  const purchaseErrorMessage = purchaseError
+    ? getLocalizedErrorMessage(purchaseError, t, 'products.purchaseSaveError')
     : null;
 
   const loadProducts = async (showLoader = true) => {
@@ -182,36 +358,40 @@ export default function ProductsPage() {
   const handleOpenModal = (product?: Product) => {
     if (product) {
       setEditProduct(product);
-      setFormData({
-        name: product.name,
-        description: product.description || '',
-        stockLevel: product.stockLevel.toString(),
-        unitOfMeasure: product.unitOfMeasure,
-        unitCost: product.unitCost.toString(),
-        lowStockThreshold: product.lowStockThreshold.toString(),
-        category: product.category || '',
-        supplier: product.supplier || '',
-      });
+      setFormData(getInitialProductFormData(product));
     } else {
       setEditProduct(null);
-      setFormData({
-        name: '',
-        description: '',
-        stockLevel: '',
-        unitOfMeasure: '',
-        unitCost: '',
-        lowStockThreshold: '10',
-        category: '',
-        supplier: '',
-      });
+      setFormData(getInitialProductFormData());
     }
     setOpenModal(true);
     setError(null);
   };
 
-  const handleCloseModal = () => {
+  const isProductFormDirty = () => {
+    const initialData = getInitialProductFormData(editProduct);
+    return (Object.keys(initialData) as Array<keyof ProductFormData>).some(
+      (key) => formData[key] !== initialData[key]
+    );
+  };
+
+  const closeModal = () => {
     setOpenModal(false);
     setEditProduct(null);
+    setFormData(getInitialProductFormData());
+  };
+
+  const handleCloseModal = () => {
+    if (isProductFormDirty()) {
+      setDiscardConfirmOpen(true);
+      return;
+    }
+
+    closeModal();
+  };
+
+  const handleDiscardProductChanges = () => {
+    setDiscardConfirmOpen(false);
+    closeModal();
   };
 
   const resetCategoryForm = () => {
@@ -231,6 +411,26 @@ export default function ProductsPage() {
     resetCategoryForm();
   };
 
+  const handleOpenPurchaseDialog = (product: Product) => {
+    setPurchaseDialog({ open: true, product });
+    setPurchaseForm({
+      quantity: '',
+      unitOfMeasure: normalizeInventoryUnit(product.unitOfMeasure) || product.unitOfMeasure,
+      totalCost: '',
+    });
+    setPurchaseError(null);
+  };
+
+  const handleClosePurchaseDialog = () => {
+    setPurchaseDialog({ open: false, product: null });
+    setPurchaseForm({
+      quantity: '',
+      unitOfMeasure: '',
+      totalCost: '',
+    });
+    setPurchaseError(null);
+  };
+
   const handleSaveCategory = async () => {
     const name = categoryForm.trim();
     if (!name) {
@@ -238,12 +438,48 @@ export default function ProductsPage() {
       return;
     }
 
+    const existingCategory = categories.find(
+      (category) => normalizeCategoryKey(category.name) === normalizeCategoryKey(name)
+    );
+    if (existingCategory && (!editingCategory || existingCategory.id !== editingCategory.id)) {
+      setCategoryError(translatedError('products.categoryDuplicate'));
+      return;
+    }
+
     try {
       setCategoryError(null);
+      let savedCategory: ProductCategory;
       if (editingCategory) {
-        await productService.updateCategory(editingCategory.id, name);
+        savedCategory = await productService.updateCategory(editingCategory.id, name);
+        setCategories((currentCategories) =>
+          sortProductCategories(
+            currentCategories.map((category) =>
+              category.id === savedCategory.id ? savedCategory : category
+            )
+          )
+        );
+        if (normalizeCategoryKey(formData.category) === normalizeCategoryKey(editingCategory.name)) {
+          setFormData({ ...formData, category: savedCategory.name });
+        }
       } else {
-        await productService.createCategory(name);
+        savedCategory = await productService.createCategory(name);
+        setCategories((currentCategories) =>
+          sortProductCategories(
+            currentCategories.some(
+              (category) =>
+                category.id === savedCategory.id ||
+                normalizeCategoryKey(category.name) === normalizeCategoryKey(savedCategory.name)
+            )
+              ? currentCategories.map((category) =>
+                  category.id === savedCategory.id ||
+                  normalizeCategoryKey(category.name) === normalizeCategoryKey(savedCategory.name)
+                    ? savedCategory
+                    : category
+                )
+              : [...currentCategories, savedCategory]
+          )
+        );
+        setFormData({ ...formData, category: savedCategory.name });
       }
       resetCategoryForm();
       void loadProducts(false);
@@ -268,12 +504,15 @@ export default function ProductsPage() {
     try {
       const selectedCategory = formData.category.trim();
       const lowStockThreshold = parseFormNumber(formData.lowStockThreshold);
+      const stockLevel = Number(formData.stockLevel);
+      const purchaseTotalCost = Number(formData.purchaseTotalCost);
+      const unitCost = stockLevel > 0 ? purchaseTotalCost / stockLevel : purchaseTotalCost;
       const payload = {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
-        stockLevel: Number(formData.stockLevel),
+        stockLevel,
         unitOfMeasure: formData.unitOfMeasure.trim(),
-        unitCost: Number(formData.unitCost),
+        unitCost,
         lowStockThreshold: lowStockThreshold === null ? undefined : lowStockThreshold,
         category: selectedCategory,
         supplier: formData.supplier.trim() || undefined,
@@ -292,9 +531,39 @@ export default function ProductsPage() {
         setProducts((currentProducts) => [savedProduct, ...currentProducts]);
       }
 
-      handleCloseModal();
+      closeModal();
     } catch (err) {
       setError(toErrorMessage(err, 'products.saveError'));
+    }
+  };
+
+  const handleRegisterPurchase = async () => {
+    const validationError = validatePurchaseForm(purchaseForm, purchaseDialog.product);
+    if (validationError) {
+      setPurchaseError(validationError);
+      return;
+    }
+
+    if (!purchaseDialog.product) {
+      return;
+    }
+
+    try {
+      setPurchaseError(null);
+      const updatedProduct = await productService.registerPurchase(purchaseDialog.product.id, {
+        quantity: Number(purchaseForm.quantity),
+        unitOfMeasure: purchaseForm.unitOfMeasure.trim(),
+        totalCost: Number(purchaseForm.totalCost),
+      });
+
+      setProducts((currentProducts) =>
+        currentProducts.map((product) =>
+          product.id === updatedProduct.id ? updatedProduct : product
+        )
+      );
+      handleClosePurchaseDialog();
+    } catch (err) {
+      setPurchaseError(toErrorMessage(err, 'products.purchaseSaveError'));
     }
   };
 
@@ -343,7 +612,7 @@ export default function ProductsPage() {
         <Box>
           <Box sx={{ fontWeight: 'medium', display: 'flex', alignItems: 'center', gap: 1 }}>
             {row.name}
-            {isLowStock(row) && <Warning fontSize="small" color="warning" />}
+            {isLowStock(row) && <Warning fontSize="small" color="warning" titleAccess={t('products.lowStockStatus')} />}
           </Box>
           <Chip
             label={row.category || t('products.noCategory')}
@@ -358,23 +627,37 @@ export default function ProductsPage() {
     {
       id: 'stock',
       label: t('products.stockLevel'),
-      render: (row: Product) => (
-        <Chip
-          label={`${row.stockLevel} ${row.unitOfMeasure}`}
-          color={isLowStock(row) ? 'warning' : 'success'}
-          size="small"
-        />
-      ),
+      render: (row: Product) => {
+        const lowStock = isLowStock(row);
+        return (
+          <Stack spacing={0.75} alignItems="flex-start">
+            <Chip
+              icon={lowStock ? <Warning fontSize="small" /> : undefined}
+              label={`${row.stockLevel} ${row.unitOfMeasure}`}
+              color={lowStock ? 'warning' : 'success'}
+              size="small"
+            />
+            {lowStock && (
+              <Typography variant="caption" color="warning.main" sx={{ fontWeight: 700 }}>
+                {t('products.lowStockCaption', {
+                  threshold: row.lowStockThreshold,
+                  unit: row.unitOfMeasure,
+                })}
+              </Typography>
+            )}
+          </Stack>
+        );
+      },
     },
     {
       id: 'unitCost',
       label: t('products.unitCost'),
-      render: (row: Product) => `$${row.unitCost.toFixed(2)}`,
+      render: (row: Product) => formatCurrency(row.unitCost),
     },
     {
       id: 'value',
       label: t('products.totalValue'),
-      render: (row: Product) => `$${(row.stockLevel * row.unitCost).toFixed(2)}`,
+      render: (row: Product) => formatCurrency(row.stockLevel * row.unitCost),
     },
     {
       id: 'supplier',
@@ -386,6 +669,14 @@ export default function ProductsPage() {
       label: t('common.actions'),
       render: (row: Product) => (
         <Stack direction="row" spacing={1}>
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={() => handleOpenPurchaseDialog(row)}
+            title={t('products.registerPurchase')}
+          >
+            <AddShoppingCart fontSize="small" />
+          </IconButton>
           <IconButton size="small" onClick={() => handleOpenModal(row)}>
             <Edit fontSize="small" />
           </IconButton>
@@ -403,6 +694,35 @@ export default function ProductsPage() {
 
   const lowStockCount = products.filter((p) => isLowStock(p)).length;
   const categoryOptions = categories.map((category) => category.name);
+  const stockForPreview = parseFormNumber(formData.stockLevel);
+  const totalCostForPreview = parseFormNumber(formData.purchaseTotalCost);
+  const calculatedUnitCost =
+    stockForPreview !== null &&
+    totalCostForPreview !== null &&
+    !Number.isNaN(stockForPreview) &&
+    !Number.isNaN(totalCostForPreview) &&
+    stockForPreview > 0
+      ? totalCostForPreview / stockForPreview
+      : null;
+  const purchaseQuantityForPreview = parseFormNumber(purchaseForm.quantity);
+  const purchaseCostForPreview = parseFormNumber(purchaseForm.totalCost);
+  const purchaseQuantityInProductUnit =
+    purchaseDialog.product &&
+    purchaseQuantityForPreview !== null &&
+    !Number.isNaN(purchaseQuantityForPreview)
+      ? convertInventoryQuantity(
+          purchaseQuantityForPreview,
+          purchaseForm.unitOfMeasure,
+          purchaseDialog.product.unitOfMeasure
+        )
+      : null;
+  const purchaseUnitCostPreview =
+    purchaseCostForPreview !== null &&
+    !Number.isNaN(purchaseCostForPreview) &&
+    purchaseQuantityInProductUnit !== null &&
+    purchaseQuantityInProductUnit > 0
+      ? purchaseCostForPreview / purchaseQuantityInProductUnit
+      : null;
 
   if (loading) {
     return <Box>{t('common.loading')}</Box>;
@@ -509,28 +829,44 @@ export default function ProductsPage() {
                 value={formData.stockLevel}
                 onChange={(e) => setFormData({ ...formData, stockLevel: e.target.value })}
                 required
+                helperText={t('products.stockLimitHelp', { limit: PRODUCT_STOCK_LIMIT })}
                 InputProps={{
                   inputProps: { min: 0, max: PRODUCT_STOCK_LIMIT, step: 'any' },
                 }}
               />
               <TextField
+                select
                 label={t('products.unitOfMeasure')}
                 fullWidth
                 value={formData.unitOfMeasure}
                 onChange={(e) => setFormData({ ...formData, unitOfMeasure: e.target.value })}
-                placeholder={t('products.unitOfMeasurePlaceholder')}
                 required
-              />
+                helperText={t('products.unitOfMeasureHelp')}
+              >
+                {INVENTORY_UNIT_OPTIONS.map((unit) => (
+                  <MenuItem key={unit.value} value={unit.value}>
+                    {unit.label}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Stack>
             <TextField
-              label={t('products.unitCost')}
+              label={t('products.purchaseTotalCost')}
               type="number"
               fullWidth
-              value={formData.unitCost}
-              onChange={(e) => setFormData({ ...formData, unitCost: e.target.value })}
+              value={formData.purchaseTotalCost}
+              onChange={(e) => setFormData({ ...formData, purchaseTotalCost: e.target.value })}
               required
+              helperText={
+                calculatedUnitCost === null
+                  ? t('products.purchaseTotalCostHelp')
+                  : t('products.unitCostPreview', {
+                      cost: formatCurrency(calculatedUnitCost),
+                      unit: formData.unitOfMeasure || t('products.unit'),
+                    })
+              }
               InputProps={{
-                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                startAdornment: <InputAdornment position="start">{getDisplayCurrencySymbol()}</InputAdornment>,
                 inputProps: { min: 0, max: MAX_PRODUCT_COST, step: 'any' },
               }}
             />
@@ -540,7 +876,7 @@ export default function ProductsPage() {
               fullWidth
               value={formData.lowStockThreshold}
               onChange={(e) => setFormData({ ...formData, lowStockThreshold: e.target.value })}
-              helperText={t('products.lowStockHelp')}
+              helperText={`${t('products.lowStockHelp')} ${t('products.stockLimitHelp', { limit: LOW_STOCK_THRESHOLD_LIMIT })}`}
               InputProps={{
                 inputProps: { min: 0, max: LOW_STOCK_THRESHOLD_LIMIT, step: 'any' },
               }}
@@ -633,6 +969,78 @@ export default function ProductsPage() {
         </DialogActions>
       </Dialog>
 
+      <Dialog open={purchaseDialog.open} onClose={handleClosePurchaseDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {t('products.purchaseTitle', { name: purchaseDialog.product?.name || '' })}
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            {purchaseErrorMessage && <Alert severity="error">{purchaseErrorMessage}</Alert>}
+            <Alert severity="info">{t('products.purchaseHelp')}</Alert>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField
+                label={t('products.purchaseQuantity')}
+                type="number"
+                fullWidth
+                value={purchaseForm.quantity}
+                onChange={(e) => setPurchaseForm({ ...purchaseForm, quantity: e.target.value })}
+                required
+                InputProps={{
+                  inputProps: { min: 0.001, step: 'any' },
+                }}
+              />
+              <TextField
+                select
+                label={t('products.unitOfMeasure')}
+                fullWidth
+                value={purchaseForm.unitOfMeasure}
+                onChange={(e) => setPurchaseForm({ ...purchaseForm, unitOfMeasure: e.target.value })}
+                required
+              >
+                {getCompatibleInventoryUnitOptions(purchaseDialog.product?.unitOfMeasure || '').map((unit) => (
+                  <MenuItem key={unit.value} value={unit.value}>
+                    {unit.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
+            <TextField
+              label={t('products.purchaseCost')}
+              type="number"
+              fullWidth
+              value={purchaseForm.totalCost}
+              onChange={(e) => setPurchaseForm({ ...purchaseForm, totalCost: e.target.value })}
+              required
+              InputProps={{
+                startAdornment: <InputAdornment position="start">{getDisplayCurrencySymbol()}</InputAdornment>,
+                inputProps: { min: 0.01, max: MAX_PRODUCT_COST, step: 'any' },
+              }}
+            />
+            {purchaseDialog.product && purchaseUnitCostPreview !== null && (
+              <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default' }}>
+                <Stack spacing={0.75}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                    {t('products.purchasePreviewTitle')}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {t('products.purchaseUnitCostPreview', {
+                      cost: formatCurrency(purchaseUnitCostPreview),
+                      unit: purchaseDialog.product.unitOfMeasure,
+                    })}
+                  </Typography>
+                </Stack>
+              </Paper>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ gap: 1 }}>
+          <Button onClick={handleClosePurchaseDialog}>{t('common.cancel')}</Button>
+          <Button onClick={() => void handleRegisterPurchase()} variant="contained">
+            {t('products.registerPurchase')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={categoryDialogOpen} onClose={handleCloseCategoryDialog} maxWidth="sm" fullWidth>
         <DialogTitle>{t('products.manageCategories')}</DialogTitle>
         <DialogContent>
@@ -712,6 +1120,16 @@ export default function ProductsPage() {
         message={t('products.deleteCategoryMessage', { name: deleteCategoryConfirm.category?.name || '' })}
         onConfirm={() => void handleDeleteCategory()}
         onCancel={() => setDeleteCategoryConfirm({ open: false, category: null })}
+      />
+
+      <ConfirmDialog
+        open={discardConfirmOpen}
+        title={t('common.unsavedChangesTitle')}
+        message={t('common.unsavedChangesMessage')}
+        confirmText={t('common.discardChanges')}
+        cancelText={t('common.keepEditing')}
+        onConfirm={handleDiscardProductChanges}
+        onCancel={() => setDiscardConfirmOpen(false)}
       />
     </Box>
   );

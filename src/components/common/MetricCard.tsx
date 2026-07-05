@@ -1,5 +1,6 @@
 import { Card, CardContent, Typography, Box, SxProps } from '@mui/material';
-import { TrendingUp, TrendingDown } from '@mui/icons-material';
+import TrendingUp from '@mui/icons-material/TrendingUp';
+import TrendingDown from '@mui/icons-material/TrendingDown';
 import { alpha, useTheme } from '@mui/material/styles';
 
 interface MetricCardProps {

@@ -29,6 +29,7 @@ import { PageHeader, MetricCard, EmptyState } from '@/components/common';
 import { financeService } from '@/services';
 import type { DashboardMetrics, FinancialReport, ReportPeriod } from '@/types';
 import { useI18n } from '@/i18n';
+import { formatCurrency } from '@/utils';
 import { getLocalizedErrorMessage, toErrorMessage, type ErrorMessage } from '@/utils/errorMessages';
 
 const COLORS = ['#2563eb', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#64748b'];
@@ -71,10 +72,7 @@ export default function FinancePage() {
     }
   };
 
-  const formatCurrency = (value: number | undefined) => {
-    if (value === undefined || value === null) return '$0.00';
-    return `$${value.toFixed(2)}`;
-  };
+  const formatMoney = (value: number | undefined | null) => formatCurrency(value ?? 0);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -106,6 +104,7 @@ export default function FinancePage() {
     }));
 
   const expenseTotal = expensePieData?.reduce((total, item) => total + item.value, 0) || 0;
+  const topExpenseCategory = expensePieData?.[0];
 
   if (loading) {
     return (
@@ -184,7 +183,7 @@ export default function FinancePage() {
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2.5} sx={{ mb: 3.5 }}>
         <MetricCard
           title={t('finance.totalIncome')}
-          value={formatCurrency(report.totalIncome)}
+          value={formatMoney(report.totalIncome)}
           color="warning"
           sx={{ flex: 1 }}
           trend={
@@ -195,7 +194,7 @@ export default function FinancePage() {
         />
         <MetricCard
           title={t('finance.totalExpenses')}
-          value={formatCurrency(report.totalExpenses)}
+          value={formatMoney(report.totalExpenses)}
           color="error"
           sx={{ flex: 1 }}
           trend={
@@ -206,7 +205,7 @@ export default function FinancePage() {
         />
         <MetricCard
           title={t('finance.profit')}
-          value={formatCurrency(report.profit)}
+          value={formatMoney(report.profit)}
           color="info"
           sx={{ flex: 1 }}
           trend={
@@ -236,11 +235,11 @@ export default function FinancePage() {
             </Box>
             {chartData && chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData}>
+                <BarChart data={chartData} margin={{ top: 12, right: 24, left: 28, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
-                  <YAxis tickFormatter={formatCurrency} />
-                  <Tooltip formatter={(value) => (typeof value === 'number' ? formatCurrency(value) : value)} />
+                  <YAxis tickFormatter={formatMoney} width={96} tickMargin={8} />
+                  <Tooltip formatter={(value) => (typeof value === 'number' ? formatMoney(value) : value)} />
                   <Legend />
                   <Bar dataKey="income" fill="#2563eb" name={t('finance.income')} radius={[6, 6, 0, 0]} />
                   <Bar dataKey="expenses" fill="#ef4444" name={t('finance.expenses')} radius={[6, 6, 0, 0]} />
@@ -266,11 +265,11 @@ export default function FinancePage() {
               </Box>
               {topDishesData && topDishesData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={topDishesData.slice(0, 5)} layout="vertical">
+                  <BarChart data={topDishesData.slice(0, 5)} layout="vertical" margin={{ top: 8, right: 20, left: 8, bottom: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" tickFormatter={formatCurrency} />
+                    <XAxis type="number" tickFormatter={formatMoney} tickMargin={8} />
                     <YAxis dataKey="name" type="category" width={100} />
-                    <Tooltip formatter={(value) => (typeof value === 'number' ? formatCurrency(value) : value)} />
+                    <Tooltip formatter={(value) => (typeof value === 'number' ? formatMoney(value) : value)} />
                     <Bar dataKey="revenue" fill="#2563eb" radius={[0, 6, 6, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -290,6 +289,15 @@ export default function FinancePage() {
                   {t('finance.expensesBreakdown')}
                 </Box>
               </Box>
+              {topExpenseCategory && expenseTotal > 0 && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  {t('finance.topExpenseCategory', {
+                    category: topExpenseCategory.name,
+                    percentage: ((topExpenseCategory.value / expenseTotal) * 100).toFixed(0),
+                    amount: formatMoney(topExpenseCategory.value),
+                  })}
+                </Alert>
+              )}
               {expensePieData && expensePieData.length > 0 ? (
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
                   <Box sx={{ width: { xs: '100%', sm: '52%' }, minWidth: 0 }}>
@@ -309,7 +317,7 @@ export default function FinancePage() {
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value) => (typeof value === 'number' ? formatCurrency(value) : value)} />
+                        <Tooltip formatter={(value) => (typeof value === 'number' ? formatMoney(value) : value)} />
                       </PieChart>
                     </ResponsiveContainer>
                   </Box>
@@ -334,7 +342,7 @@ export default function FinancePage() {
                               </Typography>
                             </Stack>
                             <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                              {formatCurrency(item.value)}
+                              {formatMoney(item.value)}
                             </Typography>
                           </Stack>
                           <LinearProgress

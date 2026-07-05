@@ -69,9 +69,29 @@ export interface Dish {
   description?: string;
   price: number;
   ingredients: string;
+  recipeItems: DishRecipeItem[];
+  availableOrders?: number | null;
   userId: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface DishRecipeItem {
+  productId: number;
+  productName: string;
+  requiredQuantity: number;
+  requiredUnitOfMeasure?: string;
+  unitOfMeasure: string;
+  stockUnitOfMeasure?: string;
+  stockLevel: number;
+  availableOrders: number;
+  missingForOneOrder: number;
+}
+
+export interface DishRecipeItemRequest {
+  productId: number;
+  requiredQuantity: number;
+  requiredUnitOfMeasure?: string;
 }
 
 export interface CreateDishRequest {
@@ -79,6 +99,7 @@ export interface CreateDishRequest {
   description?: string;
   price: number;
   ingredients: string;
+  recipeItems?: DishRecipeItemRequest[];
 }
 
 export interface UpdateDishRequest {
@@ -86,6 +107,7 @@ export interface UpdateDishRequest {
   description?: string;
   price?: number;
   ingredients?: string;
+  recipeItems?: DishRecipeItemRequest[];
 }
 
 // ==================== Product Types ====================
@@ -132,6 +154,12 @@ export interface UpdateProductRequest {
   lowStockThreshold?: number;
   category?: string;
   supplier?: string;
+}
+
+export interface RegisterProductPurchaseRequest {
+  quantity: number;
+  unitOfMeasure?: string;
+  totalCost: number;
 }
 
 // ==================== Order Types ====================

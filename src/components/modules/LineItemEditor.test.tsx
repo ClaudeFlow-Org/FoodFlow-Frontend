@@ -12,6 +12,8 @@ const dishes: Dish[] = [
     description: 'Entrada y fondo',
     price: 12.5,
     ingredients: 'arroz, pollo',
+    recipeItems: [],
+    availableOrders: null,
     userId: 1,
     createdAt: '2026-05-09T10:00:00',
     updatedAt: '2026-05-09T10:00:00',

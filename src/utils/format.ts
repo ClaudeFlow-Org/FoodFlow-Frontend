@@ -1,15 +1,50 @@
+export type DisplayCurrency = 'USD' | 'PEN';
+
+export const DISPLAY_CURRENCY_STORAGE_KEY = 'foodflow.displayCurrency';
+
+export const DISPLAY_CURRENCY_OPTIONS: Array<{ code: DisplayCurrency; label: string; symbol: string }> = [
+  { code: 'USD', label: 'USD ($)', symbol: '$' },
+  { code: 'PEN', label: 'PEN (S/.)', symbol: 'S/.' },
+];
+
+export function getDisplayCurrency(): DisplayCurrency {
+  try {
+    const stored = window.localStorage.getItem(DISPLAY_CURRENCY_STORAGE_KEY);
+    return stored === 'PEN' ? 'PEN' : 'USD';
+  } catch {
+    return 'USD';
+  }
+}
+
+export function setDisplayCurrency(currency: DisplayCurrency): void {
+  try {
+    window.localStorage.setItem(DISPLAY_CURRENCY_STORAGE_KEY, currency);
+  } catch {
+    // Visual preference only; ignore storage errors.
+  }
+}
+
+export function getDisplayCurrencySymbol(currency: DisplayCurrency = getDisplayCurrency()): string {
+  return DISPLAY_CURRENCY_OPTIONS.find((option) => option.code === currency)?.symbol || '$';
+}
+
 /**
- * Format a number as currency
- * @param value - The number to format
- * @param currency - The currency code (default: USD)
- * @param locale - The locale for formatting (default: en-US)
- * @returns Formatted currency string
+ * Format a number as currency. The default currency is a visual preference and
+ * does not convert stored amounts.
  */
 export function formatCurrency(
   value: number,
-  currency: string = 'USD',
-  locale: string = 'en-US'
+  currency: string = getDisplayCurrency(),
+  locale: string = currency === 'PEN' ? 'es-PE' : 'en-US'
 ): string {
+  if (currency === 'PEN') {
+    const amount = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+    return `S/. ${amount}`;
+  }
+
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,

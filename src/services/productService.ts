@@ -4,6 +4,7 @@ import type {
   Product,
   ProductCategory,
   CreateProductRequest,
+  RegisterProductPurchaseRequest,
   UpdateProductRequest,
 } from '@/types';
 
@@ -78,6 +79,14 @@ class ProductService {
     const response = await api.put<ApiResponse<BackendProduct>>(
       `${this.basePath}/${id}/category`,
       { name }
+    );
+    return mapProduct(response.data.data);
+  }
+
+  async registerPurchase(id: number, data: RegisterProductPurchaseRequest): Promise<Product> {
+    const response = await api.post<ApiResponse<BackendProduct>>(
+      `${this.basePath}/${id}/purchases`,
+      data
     );
     return mapProduct(response.data.data);
   }

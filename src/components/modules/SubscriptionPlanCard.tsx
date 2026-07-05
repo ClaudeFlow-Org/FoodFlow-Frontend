@@ -1,5 +1,6 @@
 import { Paper, Stack, Typography, Button, Box, Chip } from '@mui/material';
-import { CheckCircle, Star } from '@mui/icons-material';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import Star from '@mui/icons-material/Star';
 import type { SubscriptionPlan } from '@/types';
 import { formatCurrency } from '@/utils';
 import { useI18n } from '@/i18n';
@@ -95,7 +96,7 @@ export function SubscriptionPlanCard({ plan, isCurrentPlan = false, onSelect }: 
           onClick={onSelect}
           disabled={isCurrentPlan}
         >
-          {isCurrentPlan ? t('common.currentPlan') : t('common.selectPlan')}
+          {isCurrentPlan ? t('common.currentPlan') : t('common.upgrade')}
         </Button>
       </Box>
     </Paper>

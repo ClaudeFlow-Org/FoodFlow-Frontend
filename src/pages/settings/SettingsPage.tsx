@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -18,20 +18,34 @@ import {
   DialogActions,
   Paper,
   Grid,
+  LinearProgress,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
 } from '@mui/material';
 import { PageHeader, PasswordVisibilityToggle } from '@/components/common';
 import { useAuthStore } from '@/store/authStore';
 import { authService, subscriptionService } from '@/services';
 import type { SubscriptionPlan, UserSubscription } from '@/types';
-import { CheckCircle, Star } from '@mui/icons-material';
+import CheckCircle from '@mui/icons-material/CheckCircle';
+import Star from '@mui/icons-material/Star';
 import { useI18n } from '@/i18n';
-import { formatCurrency } from '@/utils';
+import {
+  DISPLAY_CURRENCY_OPTIONS,
+  formatCurrency,
+  getDisplayCurrency,
+  setDisplayCurrency,
+  type DisplayCurrency,
+} from '@/utils';
 import {
   getLocalizedErrorMessage,
   toErrorMessage,
   translatedError,
   type ErrorMessage,
 } from '@/utils/errorMessages';
+
+const EMAIL_CHANGE_LOGOUT_SECONDS = 5;
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -69,6 +83,8 @@ export default function SettingsPage() {
     open: false,
     plan: null,
   });
+  const [emailLogoutCountdown, setEmailLogoutCountdown] = useState<number | null>(null);
+  const [displayCurrency, setDisplayCurrencyState] = useState<DisplayCurrency>(getDisplayCurrency());
   const [success, setSuccess] = useState('');
   const [error, setError] = useState<ErrorMessage | null>(null);
 
@@ -86,12 +102,35 @@ export default function SettingsPage() {
     }));
   };
 
+  const completeEmailChangeLogout = useCallback(() => {
+    setEmailLogoutCountdown(null);
+    useAuthStore.getState().logout();
+    void navigate('/login');
+  }, [navigate]);
+
   useEffect(() => {
     if (user) {
       setProfileData({ name: user.name, email: user.email });
     }
     void loadSubscriptionData();
   }, [user]);
+
+  useEffect(() => {
+    if (emailLogoutCountdown === null) {
+      return;
+    }
+
+    if (emailLogoutCountdown <= 0) {
+      completeEmailChangeLogout();
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setEmailLogoutCountdown((current) => (current === null ? null : current - 1));
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [emailLogoutCountdown, completeEmailChangeLogout]);
 
   const loadSubscriptionData = async () => {
     try {
@@ -113,17 +152,18 @@ export default function SettingsPage() {
 
   const handleProfileUpdate = async () => {
     try {
-      const emailChanged = user?.email !== profileData.email;
-      await updateProfile({ name: profileData.name, email: profileData.email });
+      const nextProfileData = {
+        name: profileData.name.trim(),
+        email: profileData.email.trim().toLowerCase(),
+      };
+      const emailChanged = user?.email !== nextProfileData.email;
+      await updateProfile(nextProfileData);
+      setProfileData(nextProfileData);
       setError(null);
 
       if (emailChanged) {
-        setSuccess(t('settings.profileUpdated') + '. ' + t('settings.emailChangedRedirect'));
-        setTimeout(() => {
-          // Logout and redirect to login
-          useAuthStore.getState().logout();
-          void navigate('/login');
-        }, 3000);
+        setSuccess(t('settings.profileUpdated'));
+        setEmailLogoutCountdown(EMAIL_CHANGE_LOGOUT_SECONDS);
       } else {
         setSuccess(t('settings.profileUpdated'));
         setTimeout(() => setSuccess(''), 3000);
@@ -176,6 +216,11 @@ export default function SettingsPage() {
         setError(toErrorMessage(err, 'settings.subscriptionUpdateError'));
       }
     }
+  };
+
+  const handleCurrencyChange = (currency: DisplayCurrency) => {
+    setDisplayCurrency(currency);
+    setDisplayCurrencyState(currency);
   };
 
   return (
@@ -242,6 +287,20 @@ export default function SettingsPage() {
                   ),
                 }}
               />
+              <FormControl fullWidth>
+                <InputLabel>{t('settings.displayCurrency')}</InputLabel>
+                <Select
+                  value={displayCurrency}
+                  label={t('settings.displayCurrency')}
+                  onChange={(event) => handleCurrencyChange(event.target.value as DisplayCurrency)}
+                >
+                  {DISPLAY_CURRENCY_OPTIONS.map((option) => (
+                    <MenuItem key={option.code} value={option.code}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               <Button
                 variant="contained"
                 onClick={() => void handleProfileUpdate()}
@@ -427,6 +486,32 @@ export default function SettingsPage() {
           <Button onClick={() => setUpgradeDialog({ open: false, plan: null })}>{t('common.cancel')}</Button>
           <Button onClick={() => void handleSubscribe()} variant="contained">
             {t('common.confirm')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={emailLogoutCountdown !== null} maxWidth="xs" fullWidth>
+        <DialogTitle>{t('settings.emailChangedLogoutTitle')}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2}>
+            <Typography>
+              {t('settings.emailChangedLogoutMessage', {
+                seconds: emailLogoutCountdown ?? 0,
+              })}
+            </Typography>
+            <LinearProgress
+              variant="determinate"
+              value={
+                emailLogoutCountdown === null
+                  ? 100
+                  : ((EMAIL_CHANGE_LOGOUT_SECONDS - emailLogoutCountdown) / EMAIL_CHANGE_LOGOUT_SECONDS) * 100
+              }
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={completeEmailChangeLogout} variant="contained">
+            {t('settings.emailChangedLogoutNow')}
           </Button>
         </DialogActions>
       </Dialog>

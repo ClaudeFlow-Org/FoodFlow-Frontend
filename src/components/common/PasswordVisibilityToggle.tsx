@@ -1,5 +1,6 @@
 import { IconButton, InputAdornment, Tooltip } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { useI18n } from '@/i18n';
 
 interface PasswordVisibilityToggleProps {

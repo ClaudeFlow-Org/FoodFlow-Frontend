@@ -1,5 +1,5 @@
 import { IconButton } from '@mui/material';
-import { Close } from '@mui/icons-material';
+import Close from '@mui/icons-material/Close';
 import { useI18n } from '@/i18n';
 
 interface CloseIconButtonProps {
