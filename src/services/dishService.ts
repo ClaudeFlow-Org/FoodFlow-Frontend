@@ -12,6 +12,18 @@ interface BackendDish {
   description?: string;
   price?: number;
   ingredients?: string;
+  recipeItems?: {
+    productId: number;
+    productName: string;
+    requiredQuantity: number;
+    requiredUnitOfMeasure?: string;
+    unitOfMeasure: string;
+    stockUnitOfMeasure?: string;
+    stockLevel: number;
+    availableOrders: number;
+    missingForOneOrder: number;
+  }[];
+  availableOrders?: number | null;
   createdAt: string;
 }
 
@@ -21,6 +33,8 @@ const mapDish = (dish: BackendDish): Dish => ({
   description: dish.description,
   price: dish.price ?? 0,
   ingredients: dish.ingredients || '',
+  recipeItems: dish.recipeItems || [],
+  availableOrders: dish.availableOrders ?? null,
   userId: 0,
   createdAt: dish.createdAt,
   updatedAt: dish.createdAt,

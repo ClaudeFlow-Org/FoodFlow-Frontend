@@ -114,7 +114,7 @@ export default function LoginPage() {
           <Box
             component="img"
             src={brandLogoSrc}
-            alt=""
+            alt={t('app.name')}
             sx={{ width: 58, height: 58, objectFit: 'contain', mb: 1.5 }}
           />
           <Typography component="h1" variant="h4" gutterBottom sx={{ fontWeight: 850, textAlign: 'center' }}>

@@ -49,6 +49,8 @@ describe('dishService', () => {
         description: undefined,
         price: 0,
         ingredients: '',
+        recipeItems: [],
+        availableOrders: null,
         userId: 0,
         createdAt: '2026-05-09T09:00:00',
         updatedAt: '2026-05-09T09:00:00',

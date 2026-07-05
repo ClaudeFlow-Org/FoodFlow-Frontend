@@ -75,7 +75,7 @@ export default function MainLayout() {
           <Box
             component="img"
             src={brandLogoSrc}
-            alt=""
+            alt={t('app.name')}
             sx={{ width: 38, height: 38, objectFit: 'contain', flexShrink: 0 }}
           />
           <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 800, color: 'primary.main' }}>

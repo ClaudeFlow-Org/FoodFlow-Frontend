@@ -96,7 +96,7 @@ export function SubscriptionPlanCard({ plan, isCurrentPlan = false, onSelect }: 
           onClick={onSelect}
           disabled={isCurrentPlan}
         >
-          {isCurrentPlan ? t('common.currentPlan') : t('common.selectPlan')}
+          {isCurrentPlan ? t('common.currentPlan') : t('common.upgrade')}
         </Button>
       </Box>
     </Paper>

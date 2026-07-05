@@ -29,6 +29,7 @@ import { PageHeader, ConfirmDialog, DataTable, EmptyState } from '@/components/c
 import { orderService, dishService } from '@/services';
 import type { Order, Dish, CreateLineItemRequest, OrderType, OrderStatus, Column } from '@/types';
 import { useI18n } from '@/i18n';
+import { formatCurrency } from '@/utils';
 import {
   getLocalizedErrorMessage,
   toErrorMessage,
@@ -49,8 +50,14 @@ interface LineItemForm extends CreateLineItemRequest {
   unitPrice: number;
 }
 
-// Helper to get first dish ID or 0 if no dishes
-const getInitialDishId = (dishes: Dish[]) => dishes.length > 0 ? dishes[0].id : 0;
+const hasRecipeAvailability = (dish: Dish) =>
+  dish.recipeItems.length > 0 && dish.availableOrders !== null && dish.availableOrders !== undefined;
+
+const isDishUnavailable = (dish: Dish) =>
+  hasRecipeAvailability(dish) && (dish.availableOrders ?? 0) <= 0;
+
+const getInitialDishId = (dishes: Dish[]) =>
+  dishes.find((dish) => !isDishUnavailable(dish))?.id ?? 0;
 
 export default function OrdersPage() {
   const { t } = useI18n();
@@ -62,6 +69,7 @@ export default function OrdersPage() {
     open: false,
     order: null,
   });
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const [error, setError] = useState<ErrorMessage | null>(null);
 
   const [formData, setFormData] = useState({
@@ -75,6 +83,39 @@ export default function OrdersPage() {
   }, []);
 
   const errorMessage = error ? getLocalizedErrorMessage(error, t, 'orders.loadError') : null;
+  const hasAvailableDishes = dishes.some((dish) => !isDishUnavailable(dish));
+
+  const getDishById = (dishId: number) => dishes.find((dish) => dish.id === dishId);
+
+  const validateLineItemAvailability = (): ErrorMessage | null => {
+    const quantitiesByDish = new Map<number, number>();
+    for (const item of lineItems) {
+      if (!Number.isFinite(item.quantity) || item.quantity < 1) {
+        return translatedError('orders.invalidQuantity');
+      }
+      quantitiesByDish.set(item.dishId, (quantitiesByDish.get(item.dishId) || 0) + item.quantity);
+    }
+
+    for (const [dishId, quantity] of quantitiesByDish.entries()) {
+      const dish = getDishById(dishId);
+      if (!dish) {
+        return translatedError('orders.dishNotFound');
+      }
+
+      if (isDishUnavailable(dish)) {
+        return translatedError('orders.unavailableDishSelected', { dish: dish.name });
+      }
+
+      if (hasRecipeAvailability(dish) && quantity > (dish.availableOrders ?? 0)) {
+        return translatedError('orders.insufficientDishAvailability', {
+          dish: dish.name,
+          available: dish.availableOrders ?? 0,
+        });
+      }
+    }
+
+    return null;
+  };
 
   const loadData = async () => {
     try {
@@ -101,13 +142,39 @@ export default function OrdersPage() {
     setError(null);
   };
 
-  const handleCloseModal = () => {
+  const isOrderFormDirty = () => {
+    return formData.tableIdentifier.trim() !== '' || lineItems.length > 0;
+  };
+
+  const closeModal = () => {
     setOpenModal(false);
     setLineItems([]);
+    setFormData({
+      tableIdentifier: '',
+    });
+  };
+
+  const handleCloseModal = () => {
+    if (isOrderFormDirty()) {
+      setDiscardConfirmOpen(true);
+      return;
+    }
+
+    closeModal();
+  };
+
+  const handleDiscardOrderChanges = () => {
+    setDiscardConfirmOpen(false);
+    closeModal();
   };
 
   const addLineItem = () => {
     const initialDishId = getInitialDishId(dishes);
+    if (!initialDishId) {
+      setError(translatedError('orders.noAvailableDishes'));
+      return;
+    }
+
     const initialDish = dishes.find(d => d.id === initialDishId);
     setLineItems([...lineItems, {
       dishId: initialDishId,
@@ -120,7 +187,8 @@ export default function OrdersPage() {
   const updateLineItem = (index: number, field: keyof LineItemForm, value: string | number) => {
     const updated = [...lineItems];
     if (field === 'dishId') {
-      const dish = dishes.find((d) => d.id === value);
+      const selectedDishId = Number(value);
+      const dish = dishes.find((d) => d.id === selectedDishId);
       if (dish) {
         updated[index] = {
           ...updated[index],
@@ -150,6 +218,12 @@ export default function OrdersPage() {
         return;
       }
 
+      const availabilityError = validateLineItemAvailability();
+      if (availabilityError) {
+        setError(availabilityError);
+        return;
+      }
+
       await orderService.create({
         tableIdentifier: formData.tableIdentifier,
         lineItems: lineItems.map(({ dishId, dishName, unitPrice, quantity }) => ({
@@ -160,7 +234,7 @@ export default function OrdersPage() {
         })),
       });
 
-      handleCloseModal();
+      closeModal();
       void loadData();
     } catch (err) {
       setError(toErrorMessage(err, 'orders.createError'));
@@ -231,7 +305,7 @@ export default function OrdersPage() {
       label: t('orders.total'),
       render: (row: Order) => (
         <Typography variant="body2" fontWeight="bold">
-          ${row.totalAmount.toFixed(2)}
+          {formatCurrency(row.totalAmount)}
         </Typography>
       ),
     },
@@ -267,13 +341,15 @@ export default function OrdersPage() {
               <Cancel fontSize="small" />
             </IconButton>
           )}
-          <IconButton
-            size="small"
-            color="error"
-            onClick={() => setDeleteConfirm({ open: true, order: row })}
-          >
-            <Delete fontSize="small" />
-          </IconButton>
+          {row.status !== 'ENTREGADA' && (
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => setDeleteConfirm({ open: true, order: row })}
+            >
+              <Delete fontSize="small" />
+            </IconButton>
+          )}
         </Stack>
       ),
     },
@@ -341,60 +417,88 @@ export default function OrdersPage() {
               <Typography variant="subtitle2" gutterBottom>
                 {t('orders.lineItems')}
               </Typography>
-              {lineItems.map((item, index) => (
-                <Paper key={index} sx={{ p: { xs: 2, sm: 2.25 }, mb: 2 }}>
-                  <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }}>
-                    <FormControl sx={{ flexGrow: 1, minWidth: { md: 280 } }}>
-                      <InputLabel>{t('orders.dish')}</InputLabel>
-                      <Select
-                        value={item.dishId}
-                        label={t('orders.dish')}
-                        onChange={(e) => updateLineItem(index, 'dishId', e.target.value)}
-                      >
-                        {dishes.map((dish) => (
-                          <MenuItem key={dish.id} value={dish.id}>
-                            {dish.name} - ${dish.price.toFixed(2)}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    <TextField
-                      label={t('orders.quantity')}
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => updateLineItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                      InputProps={{
-                        inputProps: { min: 1 },
-                      }}
-                      sx={{ width: { xs: '100%', md: 110 } }}
-                    />
-                    <Typography variant="body2" sx={{ minWidth: { md: 88 }, fontWeight: 700 }}>
-                      ${item.unitPrice.toFixed(2)}
-                    </Typography>
-                    <IconButton
-                      color="error"
-                      onClick={() => removeLineItem(index)}
-                      disabled={lineItems.length === 1 && index === 0}
-                    >
-                      <Remove />
-                    </IconButton>
-                  </Stack>
-                </Paper>
-              ))}
+              {lineItems.map((item, index) => {
+                const selectedDish = getDishById(item.dishId);
+                const availabilityLimit = selectedDish && hasRecipeAvailability(selectedDish)
+                  ? selectedDish.availableOrders ?? 0
+                  : null;
+
+                return (
+                  <Paper key={index} sx={{ p: { xs: 2, sm: 2.25 }, mb: 2 }}>
+                    <Stack spacing={1}>
+                      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }}>
+                        <FormControl sx={{ flexGrow: 1, minWidth: { md: 280 } }}>
+                          <InputLabel>{t('orders.dish')}</InputLabel>
+                          <Select
+                            value={item.dishId}
+                            label={t('orders.dish')}
+                            onChange={(e) => updateLineItem(index, 'dishId', e.target.value)}
+                          >
+                            {dishes.map((dish) => (
+                              <MenuItem key={dish.id} value={dish.id} disabled={isDishUnavailable(dish)}>
+                                {dish.name} - {formatCurrency(dish.price)}
+                                {isDishUnavailable(dish) ? ` (${t('orders.unavailableDish')})` : ''}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <TextField
+                          label={t('orders.quantity')}
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => updateLineItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                          InputProps={{
+                            inputProps: {
+                              min: 1,
+                              max: availabilityLimit ?? undefined,
+                            },
+                          }}
+                          sx={{ width: { xs: '100%', md: 110 } }}
+                        />
+                        <Typography variant="body2" sx={{ minWidth: { md: 88 }, fontWeight: 700 }}>
+                          {formatCurrency(item.unitPrice)}
+                        </Typography>
+                        <IconButton
+                          color="error"
+                          onClick={() => removeLineItem(index)}
+                          disabled={lineItems.length === 1 && index === 0}
+                        >
+                          <Remove />
+                        </IconButton>
+                      </Stack>
+                      {selectedDish && hasRecipeAvailability(selectedDish) && (
+                        <Typography
+                          variant="caption"
+                          color={(selectedDish.availableOrders ?? 0) > 0 ? 'text.secondary' : 'error.main'}
+                        >
+                          {(selectedDish.availableOrders ?? 0) > 0
+                            ? t('orders.availableDishCount', { count: selectedDish.availableOrders ?? 0 })
+                            : t('orders.noDishStock')}
+                        </Typography>
+                      )}
+                    </Stack>
+                  </Paper>
+                );
+              })}
               <Button
                 startIcon={<AddCircle />}
                 onClick={addLineItem}
-                disabled={dishes.length === 0}
+                disabled={!hasAvailableDishes}
               >
                 {t('orders.addItem')}
               </Button>
+              {!hasAvailableDishes && dishes.length > 0 && (
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  {t('orders.noAvailableDishes')}
+                </Alert>
+              )}
             </Box>
 
             <Paper sx={{ p: { xs: 2, sm: 2.5 }, bgcolor: 'background.default' }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
                 <Typography variant="h6">{t('orders.total')}</Typography>
                 <Typography variant="h4" color="primary.main" sx={{ fontWeight: 850, whiteSpace: 'nowrap' }}>
-                  ${getTotal().toFixed(2)}
+                  {formatCurrency(getTotal())}
                 </Typography>
               </Stack>
             </Paper>
@@ -405,7 +509,7 @@ export default function OrdersPage() {
           <Button
             onClick={() => void handleSubmit()}
             variant="contained"
-            disabled={lineItems.length === 0 || !formData.tableIdentifier}
+            disabled={lineItems.length === 0 || !formData.tableIdentifier || !hasAvailableDishes}
           >
             {t('orders.create')}
           </Button>
@@ -421,6 +525,16 @@ export default function OrdersPage() {
         })}
         onConfirm={() => void handleDelete()}
         onCancel={() => setDeleteConfirm({ open: false, order: null })}
+      />
+
+      <ConfirmDialog
+        open={discardConfirmOpen}
+        title={t('common.unsavedChangesTitle')}
+        message={t('common.unsavedChangesMessage')}
+        confirmText={t('common.discardChanges')}
+        cancelText={t('common.keepEditing')}
+        onConfirm={handleDiscardOrderChanges}
+        onCancel={() => setDiscardConfirmOpen(false)}
       />
     </Box>
   );
