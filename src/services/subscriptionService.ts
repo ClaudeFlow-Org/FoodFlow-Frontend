@@ -52,9 +52,15 @@ const planLimits: Record<string, Pick<SubscriptionPlan, 'maxDishes' | 'maxProduc
 };
 
 const toSubscriptionType = (name: string): SubscriptionPlan['type'] => {
-  const normalized = name.toUpperCase();
+  const normalized = name.trim().toUpperCase();
   if (normalized === 'STANDARD' || normalized === 'PREMIUM') {
     return normalized;
+  }
+  if (normalized === 'FREE' || normalized === 'GRATIS') {
+    return 'FREE';
+  }
+  if (normalized === 'ESTANDAR' || normalized === 'ESTÁNDAR') {
+    return 'STANDARD';
   }
   return 'FREE';
 };

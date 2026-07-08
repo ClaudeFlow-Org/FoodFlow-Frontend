@@ -38,6 +38,10 @@ import {
 } from '@/utils/errorMessages';
 
 const orderTypes: OrderType[] = ['DINE_IN', 'TAKEAWAY', 'DELIVERY'];
+const MAX_TABLE_IDENTIFIER_LENGTH = 50;
+const MAX_ORDER_LINE_ITEMS = 30;
+const MAX_ORDER_ITEM_QUANTITY = 100;
+const MAX_ORDER_TOTAL = 9_999_999_999.99;
 
 const statusColors: Record<OrderStatus, 'success' | 'info' | 'warning' | 'error' | 'default'> = {
   PENDIENTE: 'default',
@@ -87,11 +91,47 @@ export default function OrdersPage() {
 
   const getDishById = (dishId: number) => dishes.find((dish) => dish.id === dishId);
 
+  const normalizeOrderQuantity = (value: string | number) => {
+    const parsed = typeof value === 'number' ? value : Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed)) {
+      return 1;
+    }
+    return Math.min(Math.max(Math.trunc(parsed), 1), MAX_ORDER_ITEM_QUANTITY);
+  };
+
+  const validateOrderForm = (): ErrorMessage | null => {
+    if (!formData.tableIdentifier.trim()) {
+      return translatedError('orders.tableIdentifierRequired');
+    }
+
+    if (formData.tableIdentifier.trim().length > MAX_TABLE_IDENTIFIER_LENGTH) {
+      return translatedError('orders.tableIdentifierMax', { max: MAX_TABLE_IDENTIFIER_LENGTH });
+    }
+
+    if (lineItems.length === 0) {
+      return translatedError('orders.emptyLineItems');
+    }
+
+    if (lineItems.length > MAX_ORDER_LINE_ITEMS) {
+      return translatedError('orders.maxLineItems', { max: MAX_ORDER_LINE_ITEMS });
+    }
+
+    const total = getTotal();
+    if (!Number.isFinite(total) || total > MAX_ORDER_TOTAL) {
+      return translatedError('orders.totalMax', { max: formatCurrency(MAX_ORDER_TOTAL) });
+    }
+
+    return null;
+  };
+
   const validateLineItemAvailability = (): ErrorMessage | null => {
     const quantitiesByDish = new Map<number, number>();
     for (const item of lineItems) {
       if (!Number.isFinite(item.quantity) || item.quantity < 1) {
         return translatedError('orders.invalidQuantity');
+      }
+      if (item.quantity > MAX_ORDER_ITEM_QUANTITY) {
+        return translatedError('orders.quantityMax', { max: MAX_ORDER_ITEM_QUANTITY });
       }
       quantitiesByDish.set(item.dishId, (quantitiesByDish.get(item.dishId) || 0) + item.quantity);
     }
@@ -152,6 +192,7 @@ export default function OrdersPage() {
     setFormData({
       tableIdentifier: '',
     });
+    setError(null);
   };
 
   const handleCloseModal = () => {
@@ -169,6 +210,11 @@ export default function OrdersPage() {
   };
 
   const addLineItem = () => {
+    if (lineItems.length >= MAX_ORDER_LINE_ITEMS) {
+      setError(translatedError('orders.maxLineItems', { max: MAX_ORDER_LINE_ITEMS }));
+      return;
+    }
+
     const initialDishId = getInitialDishId(dishes);
     if (!initialDishId) {
       setError(translatedError('orders.noAvailableDishes'));
@@ -197,6 +243,8 @@ export default function OrdersPage() {
           unitPrice: dish.price,
         };
       }
+    } else if (field === 'quantity') {
+      updated[index] = { ...updated[index], quantity: normalizeOrderQuantity(value) };
     } else {
       updated[index] = { ...updated[index], [field]: value };
     }
@@ -213,8 +261,9 @@ export default function OrdersPage() {
 
   const handleSubmit = async () => {
     try {
-      if (lineItems.length === 0) {
-        setError(translatedError('orders.emptyLineItems'));
+      const formError = validateOrderForm();
+      if (formError) {
+        setError(formError);
         return;
       }
 
@@ -224,8 +273,9 @@ export default function OrdersPage() {
         return;
       }
 
+      setError(null);
       await orderService.create({
-        tableIdentifier: formData.tableIdentifier,
+        tableIdentifier: formData.tableIdentifier.trim(),
         lineItems: lineItems.map(({ dishId, dishName, unitPrice, quantity }) => ({
           dishId,
           dishName,
@@ -410,6 +460,7 @@ export default function OrdersPage() {
                 value={formData.tableIdentifier}
                 onChange={(e) => setFormData({ ...formData, tableIdentifier: e.target.value })}
                 required
+                inputProps={{ maxLength: MAX_TABLE_IDENTIFIER_LENGTH }}
               />
             </Stack>
 
@@ -446,11 +497,12 @@ export default function OrdersPage() {
                           label={t('orders.quantity')}
                           type="number"
                           value={item.quantity}
-                          onChange={(e) => updateLineItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                          onChange={(e) => updateLineItem(index, 'quantity', e.target.value)}
                           InputProps={{
                             inputProps: {
                               min: 1,
-                              max: availabilityLimit ?? undefined,
+                              max: Math.min(availabilityLimit ?? MAX_ORDER_ITEM_QUANTITY, MAX_ORDER_ITEM_QUANTITY),
+                              step: 1,
                             },
                           }}
                           sx={{ width: { xs: '100%', md: 110 } }}
@@ -483,7 +535,7 @@ export default function OrdersPage() {
               <Button
                 startIcon={<AddCircle />}
                 onClick={addLineItem}
-                disabled={!hasAvailableDishes}
+                disabled={!hasAvailableDishes || lineItems.length >= MAX_ORDER_LINE_ITEMS}
               >
                 {t('orders.addItem')}
               </Button>

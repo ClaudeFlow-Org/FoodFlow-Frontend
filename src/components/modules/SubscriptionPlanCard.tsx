@@ -50,7 +50,7 @@ export function SubscriptionPlanCard({ plan, isCurrentPlan = false, onSelect }: 
         </Box>
         <Typography variant="h4" color="primary.main" sx={{ fontWeight: 850 }}>
           {formatCurrency(plan.price)}
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" component="span" color="text.secondary" sx={{ ml: 0.5 }}>
             /{t('settings.monthly')}
           </Typography>
         </Typography>

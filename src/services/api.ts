@@ -14,10 +14,14 @@ interface RetryableAxiosRequestConfig extends InternalAxiosRequestConfig {
 }
 
 const MAX_RETRIES = 3;
-const BASE_TIMEOUT = 10000;
+// The backend runs on a free hosting tier that spins down when idle, so the
+// first request after a period of inactivity has to wait for a cold start
+// (this can take 30-50s). A short timeout made those requests fail even though
+// the server was simply waking up ("sometimes it loads, sometimes it doesn't,
+// reloading fixes it"), so we allow a generous timeout before giving up.
+const BASE_TIMEOUT = 45000;
 
 const apiURL = import.meta.env.VITE_API_URL || 'https://foodflow-backend-y3lj.onrender.com';
-console.log('🔧 API URL:', apiURL);
 
 const getResponseMessage = (body: ApiErrorBody | undefined) => {
   if (typeof body?.message === 'string') {
