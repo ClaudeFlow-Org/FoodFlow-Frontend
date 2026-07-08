@@ -130,7 +130,7 @@ export default function LoginPage() {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={(event) => void handleSubmit(onSubmit)(event)} sx={{ width: '100%' }}>
+          <Box component="form" noValidate onSubmit={(event) => void handleSubmit(onSubmit)(event)} sx={{ width: '100%' }}>
             <TextField
               {...register('email')}
               label={t('auth.fields.email')}

@@ -44,7 +44,12 @@ import {
 
 const PRODUCT_STOCK_LIMIT = 10000;
 const MAX_PRODUCT_COST = 999_999;
+const MAX_PRODUCT_UNIT_COST = 999_999;
 const LOW_STOCK_THRESHOLD_LIMIT = 10000;
+const MAX_PRODUCT_NAME_LENGTH = 100;
+const MAX_PRODUCT_DESCRIPTION_LENGTH = 500;
+const MAX_PRODUCT_CATEGORY_LENGTH = 80;
+const MAX_PRODUCT_SUPPLIER_LENGTH = 200;
 const INVENTORY_UNIT_OPTIONS = [
   { value: 'kg', label: 'kg' },
   { value: 'g', label: 'g' },
@@ -164,6 +169,22 @@ const validateProductForm = (formData: ProductFormData): ErrorMessage | null => 
     return translatedError('products.validation.nameRequired');
   }
 
+  if (formData.name.trim().length > MAX_PRODUCT_NAME_LENGTH) {
+    return translatedError('products.validation.nameMax', { max: MAX_PRODUCT_NAME_LENGTH });
+  }
+
+  if (formData.description.trim().length > MAX_PRODUCT_DESCRIPTION_LENGTH) {
+    return translatedError('products.validation.descriptionMax', { max: MAX_PRODUCT_DESCRIPTION_LENGTH });
+  }
+
+  if (formData.category.trim().length > MAX_PRODUCT_CATEGORY_LENGTH) {
+    return translatedError('products.validation.categoryMax', { max: MAX_PRODUCT_CATEGORY_LENGTH });
+  }
+
+  if (formData.supplier.trim().length > MAX_PRODUCT_SUPPLIER_LENGTH) {
+    return translatedError('products.validation.supplierMax', { max: MAX_PRODUCT_SUPPLIER_LENGTH });
+  }
+
   if (stockLevel === null) {
     return translatedError('products.validation.stockRequired');
   }
@@ -192,12 +213,17 @@ const validateProductForm = (formData: ProductFormData): ErrorMessage | null => 
     return translatedError('products.validation.purchaseCostInvalid');
   }
 
-  if (purchaseTotalCost < 0) {
-    return translatedError('products.validation.purchaseCostNonNegative');
+  if (purchaseTotalCost <= 0) {
+    return translatedError('products.validation.purchaseCostPositive');
   }
 
   if (purchaseTotalCost > MAX_PRODUCT_COST) {
     return translatedError('products.validation.purchaseCostMax', { max: MAX_PRODUCT_COST });
+  }
+
+  const calculatedUnitCost = stockLevel > 0 ? purchaseTotalCost / stockLevel : purchaseTotalCost;
+  if (calculatedUnitCost > MAX_PRODUCT_UNIT_COST) {
+    return translatedError('products.validation.unitCostMax', { max: MAX_PRODUCT_UNIT_COST });
   }
 
   if (Number.isNaN(lowStockThreshold)) {
@@ -235,12 +261,25 @@ const validatePurchaseForm = (formData: PurchaseFormData, product: Product | nul
     return translatedError('products.validation.purchaseQuantityPositive');
   }
 
+  if (quantity > PRODUCT_STOCK_LIMIT) {
+    return translatedError('products.validation.purchaseQuantityMax', { limit: PRODUCT_STOCK_LIMIT });
+  }
+
   if (!formData.unitOfMeasure.trim()) {
     return translatedError('products.validation.unitRequired');
   }
 
   if (!areInventoryUnitsCompatible(formData.unitOfMeasure, product.unitOfMeasure)) {
     return translatedError('products.validation.purchaseUnitInvalid');
+  }
+
+  const convertedQuantity = convertInventoryQuantity(quantity, formData.unitOfMeasure, product.unitOfMeasure);
+  if (convertedQuantity === null) {
+    return translatedError('products.validation.purchaseUnitInvalid');
+  }
+
+  if (product.stockLevel + convertedQuantity > PRODUCT_STOCK_LIMIT) {
+    return translatedError('products.validation.stockMax', { limit: PRODUCT_STOCK_LIMIT });
   }
 
   if (totalCost === null) {
@@ -257,6 +296,16 @@ const validatePurchaseForm = (formData: PurchaseFormData, product: Product | nul
 
   if (totalCost > MAX_PRODUCT_COST) {
     return translatedError('products.validation.purchaseCostMax', { max: MAX_PRODUCT_COST });
+  }
+
+  const purchaseUnitCost = totalCost / convertedQuantity;
+  const currentStockValue = product.stockLevel * product.unitCost;
+  const nextUnitCost =
+    product.stockLevel > 0
+      ? (currentStockValue + totalCost) / (product.stockLevel + convertedQuantity)
+      : purchaseUnitCost;
+  if (purchaseUnitCost > MAX_PRODUCT_UNIT_COST || nextUnitCost > MAX_PRODUCT_UNIT_COST) {
+    return translatedError('products.validation.unitCostMax', { max: MAX_PRODUCT_UNIT_COST });
   }
 
   return null;
@@ -378,6 +427,7 @@ export default function ProductsPage() {
     setOpenModal(false);
     setEditProduct(null);
     setFormData(getInitialProductFormData());
+    setError(null);
   };
 
   const handleCloseModal = () => {
@@ -502,6 +552,7 @@ export default function ProductsPage() {
     }
 
     try {
+      setError(null);
       const selectedCategory = formData.category.trim();
       const lowStockThreshold = parseFormNumber(formData.lowStockThreshold);
       const stockLevel = Number(formData.stockLevel);
@@ -812,6 +863,7 @@ export default function ProductsPage() {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
+              inputProps={{ maxLength: MAX_PRODUCT_NAME_LENGTH }}
             />
             <TextField
               label={t('products.description')}
@@ -820,6 +872,7 @@ export default function ProductsPage() {
               rows={2}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              inputProps={{ maxLength: MAX_PRODUCT_DESCRIPTION_LENGTH }}
             />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
@@ -867,7 +920,7 @@ export default function ProductsPage() {
               }
               InputProps={{
                 startAdornment: <InputAdornment position="start">{getDisplayCurrencySymbol()}</InputAdornment>,
-                inputProps: { min: 0, max: MAX_PRODUCT_COST, step: 'any' },
+                inputProps: { min: 0.01, max: MAX_PRODUCT_COST, step: 'any' },
               }}
             />
             <TextField
@@ -892,6 +945,10 @@ export default function ProductsPage() {
                   {...params}
                   label={t('products.category')}
                   placeholder={t('products.categoryPlaceholder')}
+                  inputProps={{
+                    ...params.inputProps,
+                    maxLength: MAX_PRODUCT_CATEGORY_LENGTH,
+                  }}
                 />
               )}
             />
@@ -958,6 +1015,7 @@ export default function ProductsPage() {
               fullWidth
               value={formData.supplier}
               onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+              inputProps={{ maxLength: MAX_PRODUCT_SUPPLIER_LENGTH }}
             />
           </Stack>
         </DialogContent>
@@ -986,7 +1044,7 @@ export default function ProductsPage() {
                 onChange={(e) => setPurchaseForm({ ...purchaseForm, quantity: e.target.value })}
                 required
                 InputProps={{
-                  inputProps: { min: 0.001, step: 'any' },
+                  inputProps: { min: 0.001, max: PRODUCT_STOCK_LIMIT, step: 'any' },
                 }}
               />
               <TextField

@@ -136,12 +136,12 @@ describe('subscriptionService', () => {
         success: true,
         data: [
           {
-            name: 'PREMIUM',
+            name: 'Premium',
             monthlyPrice: 29,
             benefits: ['Reportes avanzados'],
           },
           {
-            name: 'FREE',
+            name: 'Free',
             monthlyPrice: 0,
             benefits: ['Panel basico'],
           },
@@ -186,7 +186,7 @@ describe('subscriptionService', () => {
         success: true,
         data: {
           id: 'sub-123',
-          plan: 'STANDARD',
+          plan: 'Standard',
           status: 'ACTIVE',
           startDate: '2026-05-09',
         },

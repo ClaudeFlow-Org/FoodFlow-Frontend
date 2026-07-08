@@ -143,7 +143,7 @@ export default function RegisterPage() {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={(event) => void handleSubmit(onSubmit)(event)} sx={{ width: '100%' }}>
+          <Box component="form" noValidate onSubmit={(event) => void handleSubmit(onSubmit)(event)} sx={{ width: '100%' }}>
             <TextField
               {...register('name')}
               label={t('auth.fields.fullName')}

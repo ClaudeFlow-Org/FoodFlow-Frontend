@@ -440,7 +440,7 @@ export default function SettingsPage() {
                   <Typography variant="h6" sx={{ fontWeight: 800 }}>{getPlanName(plan)}</Typography>
                   <Typography variant="h4" color="primary.main">
                     {formatCurrency(plan.price)}
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" component="span" color="text.secondary" sx={{ ml: 0.5 }}>
                       /{t('settings.monthly')}
                     </Typography>
                   </Typography>
